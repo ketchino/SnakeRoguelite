@@ -637,4 +637,18 @@ requestAnimationFrame(function rl() {
 
 window.addEventListener("resize", function () { if (running || mState === "paused" || mState === "dead") fitC(); });
 resetRB();
-try { showSlotMenu(); } catch(err) { console.error("Errore inizializzazione:", err); showOv(); }
+try {
+    var splashEl = document.getElementById("splash-screen");
+    function dismissSplash() {
+        if (splashEl.classList.contains("hidden")) return;
+        splashEl.classList.add("hidden");
+        // Sblocca audio context nella stessa gesture utente
+        if (typeof initAudio === "function") initAudio();
+        if (typeof audioCtx !== "undefined" && audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+        // Avvia il menu con musica
+        showSlotMenu();
+    }
+    splashEl.addEventListener("click", dismissSplash);
+    splashEl.addEventListener("touchstart", dismissSplash);
+    splashEl.addEventListener("keydown", dismissSplash);
+} catch(err) { console.error("Errore inizializzazione:", err); showOv(); }
