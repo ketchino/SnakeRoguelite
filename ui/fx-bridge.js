@@ -11,12 +11,12 @@ var fx = {
     onZoneComplete: function () { G.zoneFood = 0; save(); initZone(); },
     onBossStart: function (bossDef) {
         initBoss(G, CZ(G), bossDef, fx);
-        // Riposiziona il serpente al centro per la boss fight
+        // Riposiziona il serpente al centro per la boss fight (solo testa, si srotola)
         var bz = CZ(G);
         var sLen = Math.max(mL(G), G.snake.length);
-        var sx = Math.min(Math.floor(bz.c / 2), bz.c - 3), sy = Math.min(Math.floor(bz.r / 2), bz.r - 3);
-        G.snake = [];
-        for (var i = 0; i < sLen; i++) G.snake.push({ x: sx, y: sy });
+        var sx = Math.floor(bz.c / 2), sy = Math.floor(bz.r / 2);
+        G._targetSpawnLen = sLen;
+        G.snake = [{ x: sx, y: sy }];
         G.dir = { x: 1, y: 0 }; G.inputBuffer = [];
         G.preZoneSpawn = true;
         updateHUD(); updateZB();

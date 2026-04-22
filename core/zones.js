@@ -51,9 +51,9 @@ function initZone() {
     if (G.boss && !G.boss.defeated) {
         G.traps = []; G.pendingObs = []; G.regenTick = 0;
         var sLen = Math.max(mL(G), G.snake.length);
-        var sx = Math.min(Math.floor(z.c / 2), z.c - 3), sy = Math.min(Math.floor(z.r / 2), z.r - 3);
-        G.snake = [];
-        for (var i = 0; i < sLen; i++) G.snake.push({ x: sx - G.dir.x * i, y: sy - G.dir.y * i });
+        var sx = Math.floor(z.c / 2), sy = Math.floor(z.r / 2);
+        G._targetSpawnLen = sLen;
+        G.snake = [{ x: sx, y: sy }];
         G.dir = { x: 1, y: 0 }; G.inputBuffer = [];
         initAmb(); updateHUD(); updateZB();
         ZONE_BAR.style.display = "";
@@ -76,9 +76,9 @@ function initZone() {
     var f = spawnFood(G, CZ(G)); if (f) G.foods = [f];
     if (G.bigtop) G.bigtopTicks = 5;
     var sLen = Math.max(mL(G), G.snake.length);
-    var sx = Math.min(Math.floor(z.c / 2), z.c - 3), sy = Math.min(Math.floor(z.r / 2), z.r - 3);
-    G.snake = [];
-    for (var i = 0; i < sLen; i++) G.snake.push({ x: sx - G.dir.x * i, y: sy - G.dir.y * i });
+    var sx = Math.floor(z.c / 2), sy = Math.floor(z.r / 2);
+    G._targetSpawnLen = sLen;
+    G.snake = [{ x: sx, y: sy }];
     G.dir = { x: 1, y: 0 }; G.inputBuffer = [];
     initAmb(); updateHUD(); updateZB();
     ZONE_BAR.style.display = "";
@@ -290,18 +290,16 @@ function renderCodexScreen() {
 }
 
 function showSlotMenu() {
-    stopMusic();
     if (G && G.currentSlot) localStorage.removeItem("snake_slot_" + G.currentSlot);
     running = false; paused = false; mState = "slots"; mIdx = 0;
     clearInterval(loop); resetTheme(); resetRB(); setMS(640, 500);
     ZONE_BAR.style.display = "none";
+    var bb = document.getElementById("boss-bar"); if (bb) bb.style.display = "none";
     initCodexUI(); codexFab.style.display = "block";
     if (codexPanel) { codexPanel.classList.remove('open'); document.body.classList.remove('codex-open'); codexIsOpen = false; }
     renderSlots(); showOv();
-    // Suona OST del menu principale
+    // Suona OST del menu principale — playOst già ferma la traccia corrente internamente
     if (typeof playMenuMusic === "function") playMenuMusic();
-    // Forza tentativo play nel caso l'utente abbia appena cliccato (stessa gesture)
-    if (typeof ostInteractionHandler === "function") setTimeout(ostInteractionHandler, 50);
 }
 function renderSlots() {
     OVC.textContent = "";

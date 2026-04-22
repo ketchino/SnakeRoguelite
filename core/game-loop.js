@@ -1,6 +1,6 @@
 /* ===== GAME LOOP PRINCIPALE ===== */
 
-function mL(G) { return G.pane ? 4 : 2; }
+function mL(G) { return (G.pane ? 4 : 2) + (G.hpMaxMod || 0); }
 
 function useFrammento(G, z, fx) {
     if (!G.frammentovuoto || G.frammentoCD > 0 || !running || paused || G.isSpawning || G.snake.length < 1) return false;
@@ -227,8 +227,12 @@ function tick(G, z, fx) {
         if (spE) { G.isSpawning = false; takeDamage(G, z, null, fx, "Nemico"); return; }
 
         G.snake.unshift({ x: nx, y: ny });
-        G.snake.pop();
-        G.spawnLeft--;
+        if (G.spawnLeft > 0) {
+            G.spawnLeft--;
+            // Srotolamento: non poppare la coda, il serpente cresce — nessuna particella
+        } else {
+            G.snake.pop();
+        }
 
         var spF = -1;
         var bossCollectTypes = ["golden", "shadow", "fly", "coin", "crystal", "cosmic", "essence"];
@@ -860,7 +864,7 @@ function tick(G, z, fx) {
 
 function scheduleLoop() {
     clearInterval(loop);
-    var interval = 155 * (G.arrow ? G.arrowSpd : G.spd);
+    var interval = 195 * (G.arrow ? G.arrowSpd : G.spd);
     if (G.stonks && !G.arrow) {
         var stonksMult = Math.pow(0.998, G.stonksMeals);
         interval *= Math.max(0.3, stonksMult);

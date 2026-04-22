@@ -14,7 +14,9 @@ if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D
 
 function draw() {
     var now = performance.now(), dt = (now - lastTime) / 1000; lastTime = now;
-    if (running && !paused) {
+    // Pausa assoluta quando il debug è aperto: congela tutti i timer
+    var debugFrozen = typeof debugIsOpen !== 'undefined' && debugIsOpen;
+    if (running && !paused && !debugFrozen) {
         if (G.linkCD > 0) { G.linkCD -= dt * 1000; if (G.linkCD <= 0) { G.linkCD = 0; G.linkShield = true; } }
         if (G.kunaiCDMS > 0) { G.kunaiCDMS -= dt * 1000; if (G.kunaiCDMS < 0) G.kunaiCDMS = 0; }
         if (G.frammentovuoto && G.frammentoCD > 0) { G.frammentoCD -= dt * 1000; if (G.frammentoCD < 0) G.frammentoCD = 0; }
@@ -22,7 +24,8 @@ function draw() {
     if (!running && mState === "slots") return;
     if (typeof G.zoneIndex !== "number") return;
     var z = CZ(G), hc = hRGB(z.head);
-    if (shakeI > 0.3) { shakeX = (Math.random() - 0.5) * shakeI; shakeY = (Math.random() - 0.5) * shakeI; shakeI *= 0.82; }
+    if (debugFrozen) { shakeX = 0; shakeY = 0; }
+    else if (shakeI > 0.3) { shakeX = (Math.random() - 0.5) * shakeI; shakeY = (Math.random() - 0.5) * shakeI; shakeI *= 0.82; }
     else { shakeX = 0; shakeY = 0; shakeI = 0; }
     ctx.save(); ctx.translate(shakeX, shakeY);
     ctx.fillStyle = z.bg; ctx.fillRect(-5, -5, C.width + 10, C.height + 10);
@@ -579,8 +582,8 @@ function draw() {
         var p = particles[i];
         ctx.globalAlpha = Math.max(0, p.life / p.ml); ctx.fillStyle = p.color;
         ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
-        p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.life--;
-        if (p.life <= 0) particles.splice(i, 1);
+        if (!debugFrozen) { p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.life--; }
+        if (p.life <= 0 && !debugFrozen) particles.splice(i, 1);
     }
     ctx.globalAlpha = 1;
     // Floating texts - impilati verticalmente alla creazione, fluiscono verso l'alto
@@ -588,17 +591,18 @@ function draw() {
         var f = floats[i], prog = 1 - f.life / f.ml;
         ctx.globalAlpha = Math.max(0, 1 - prog * 1.2); ctx.fillStyle = f.color;
         ctx.font = "bold 11px 'Chakra Petch',sans-serif"; ctx.textAlign = "center";
-        ctx.fillText(f.text, f.x, f.y - prog * 22); f.life--;
-        if (f.life <= 0) floats.splice(i, 1);
+        ctx.fillText(f.text, f.x, f.y - prog * 22);
+        if (!debugFrozen) { f.life--; }
+        if (f.life <= 0 && !debugFrozen) floats.splice(i, 1);
     }
     ctx.globalAlpha = 1; ctx.restore();
     var vg = ctx.createRadialGradient(C.width / 2, C.height / 2, C.width * 0.25, C.width / 2, C.height / 2, C.width * 0.7);
     vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.35)");
     ctx.fillStyle = vg; ctx.fillRect(0, 0, C.width, C.height);
-    if (screenFlash > 0) { ctx.fillStyle = flashClr; ctx.fillRect(0, 0, C.width, C.height); screenFlash--; }
+    if (screenFlash > 0) { ctx.fillStyle = flashClr; ctx.fillRect(0, 0, C.width, C.height); if (!debugFrozen) screenFlash--; }
 
     if (relicDelay > 0) {
-        relicDelay -= dt * 1000;
+        if (!debugFrozen) relicDelay -= dt * 1000;
         ctx.save();
         ctx.globalAlpha = Math.min(1, relicDelay / 300);
         ctx.fillStyle = "#fff"; ctx.font = "900 80px 'Chakra Petch',sans-serif";
@@ -606,10 +610,10 @@ function draw() {
         ctx.shadowColor = "rgba(0,0,0,.6)"; ctx.shadowBlur = 20;
         ctx.fillText("\u25B6", C.width / 2, C.height / 2);
         ctx.restore();
-        if (relicDelay <= 0) { paused = false; scheduleLoop(); }
+        if (relicDelay <= 0 && !debugFrozen) { paused = false; scheduleLoop(); }
     }
     if (cdTimer > 0) {
-        cdTimer -= dt;
+        if (!debugFrozen) cdTimer -= dt;
         var num = Math.ceil(cdTimer), a = cdTimer > 0.5 ? 1 : cdTimer * 2;
         ctx.save(); ctx.globalAlpha = a;
         ctx.fillStyle = "rgba(255,255,255,.85)"; ctx.font = "900 120px 'Chakra Petch',sans-serif";
@@ -617,9 +621,9 @@ function draw() {
         ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 24;
         ctx.fillText(num > 0 ? num.toString() : "\u25B6", C.width / 2, C.height / 2);
         ctx.restore();
-        if (Math.ceil(cdTimer + dt) !== num && num > 0) sCD();
-        if (cdTimer <= 0) {
-            if (G.preZoneSpawn) { triggerSpawn(G, CZ(G), G.snake.length); G.preZoneSpawn = false; }
+        if (!debugFrozen && Math.ceil(cdTimer + dt) !== num && num > 0) sCD();
+        if (cdTimer <= 0 && !debugFrozen) {
+            if (G.preZoneSpawn) { triggerSpawn(G, CZ(G), G._targetSpawnLen || Math.max(mL(G), 2)); G.preZoneSpawn = false; }
             sGo(); paused = false; scheduleLoop();
             if (codexFab) codexFab.style.display = "block";
         }

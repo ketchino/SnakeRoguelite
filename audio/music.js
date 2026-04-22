@@ -290,7 +290,8 @@ function ostInteractionHandler() {
         audioCtx.resume();
     }
 
-    if (ostUnlocked) return;
+    // Se la musica sta già suonando, non fare nulla
+    if (ostIsPlaying && currentOstAudio && !currentOstAudio.paused) return;
 
     // Forza il play immediato di qualsiasi traccia in pausa
     if (currentOstAudio && currentOstAudio.paused && currentOstKey && !ostIsPlaying) {

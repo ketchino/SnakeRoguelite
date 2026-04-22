@@ -362,8 +362,8 @@ function explodeAt(G, z, x, y, depth, fx) {
 }
 
 function triggerSpawn(G, z, len) {
-    var sx = Math.min(Math.floor(z.c / 2), z.c - 3);
-    var sy = Math.min(Math.floor(z.r / 2), z.r - 3);
+    var sx = Math.floor(z.c / 2);
+    var sy = Math.floor(z.r / 2);
     var dirs = [{ x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 0, y: -1 }];
     var best = dirs[0], bestS = 0;
     for (var d = 0; d < dirs.length; d++) {
@@ -397,15 +397,14 @@ function triggerSpawn(G, z, len) {
             if (ok) { best = dirs[d2]; break; }
         }
     }
-    // Place snake fully formed (no spawning animation)
-    G.snake = [];
-    for (var i = 0; i < len; i++) {
-        G.snake.push({ x: sx - best.x * i, y: sy - best.y * i });
-    }
+    // Srotolamento: il serpente parte dalla testa al centro e si srotola
+    G.snake = [{ x: sx, y: sy }];
     G.dir = best;
     G.inputBuffer = [];
-    G.isSpawning = false;
-    G.spawnLeft = 0;
+    G.isSpawning = true;
+    G.spawnLeft = Math.max(0, len - 1);
+    G.invincible = G.spawnLeft + 4;
+    // Nessuna particella allo spawn — lo srotolamento è visivo puro
 }
 
 function spawnEP(x, y, col) { for (var i = 0; i < 14; i++) { var a = Math.random() * Math.PI * 2, sp = 2 + Math.random() * 4; particles.push({ x: x * CS + HC, y: y * CS + 10, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 25 + Math.random() * 20, ml: 45, size: 2 + Math.random() * 3, color: col }); } }
