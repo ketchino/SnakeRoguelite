@@ -64,6 +64,26 @@ function updateHUD() {
         (function (el) { setTimeout(function () { el.classList.remove("pop"); }, 400); })(d);
         renderedRC++;
     }
+    // Mostra maledizioni (secret buffs) nella relic bar con stile viola
+    if (G.secretBuffs && G.secretBuffs.length) {
+        var sbOffset = "_curse_";
+        if (!window._renderedCurses) window._renderedCurses = [];
+        // Aggiungi solo le maledizioni non ancora renderizzate
+        G.secretBuffs.forEach(function(id) {
+            if (window._renderedCurses.indexOf(id) !== -1) return;
+            var b = SECRET_BUFFS.find(function (p) { return p.id === id; });
+            if (!b) return;
+            window._renderedCurses.push(id);
+            var d = document.createElement("div"); d.className = "relic-icon pop curse-icon";
+            d.setAttribute("data-curse-id", id);
+            var tip = document.createElement("div"); tip.className = "tip";
+            var tipB = document.createElement("b"); tipB.style.color = "#c084fc"; tipB.textContent = b.name;
+            var tipSpan = document.createElement("span"); tipSpan.style.color = "#7c3aed"; tipSpan.textContent = b.desc;
+            tip.appendChild(tipB); tip.appendChild(document.createElement("br")); tip.appendChild(tipSpan);
+            d.textContent = b.icon; d.appendChild(tip); RBAR.appendChild(d);
+            (function (el) { setTimeout(function () { el.classList.remove("pop"); }, 400); })(d);
+        });
+    }
 }
 function updateZB() {
     if (!G) return;

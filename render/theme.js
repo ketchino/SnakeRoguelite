@@ -31,4 +31,4 @@ function showBanner(zoneNum, zoneName, cb) {
 }
 function showOv() { OV.style.display = "flex"; SIDE_PANEL.style.opacity = "0.15"; }
 function hideOv() { OV.style.display = "none"; SIDE_PANEL.style.opacity = "1"; }
-function resetRB() { RBAR.textContent = ""; renderedRC = 0; }
+function resetRB() { RBAR.textContent = ""; renderedRC = 0; window._renderedCurses = []; }

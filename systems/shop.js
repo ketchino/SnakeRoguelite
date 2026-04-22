@@ -35,9 +35,12 @@ function trySpawnCrack(G, z) {
 function canAffordBuff(G, buff) {
     // Il serpente deve avere più di 4 segmenti (il minimo che viene preservato)
     if (G.snake.length <= 4) return false;
-    // HP: la fn interna fa Math.max(1, ...) quindi non si muore mai,
-    // ma il costo base hp deve essere pagabile (hp >= 1 dopo il costo base)
-    var afterHp = G.hp - buff.cost.hp;
+    // HP: la fn interna di alcuni buff toglie un cuore extra (hpHiddenCost),
+    // oltre al costo base. Il totale effettivo è cost.hp + hpHiddenCost.
+    // La fn interna fa Math.max(1, ...) quindi non si muore mai,
+    // ma il giocatore deve avere abbastanza HP per coprire il costo totale.
+    var totalHpCost = buff.cost.hp + (buff.hpHiddenCost || 0);
+    var afterHp = G.hp - totalHpCost;
     if (afterHp < 1) return false;
     // HP massimo dopo il buff: non deve scendere sotto 1
     var maxHp = 4 + (G.hpMaxMod || 0) + (buff.hpMaxReduction || 0);
@@ -116,7 +119,8 @@ function renderSecretShop() {
             var nameSpan = document.createElement("span"); nameSpan.className = "shop-buff-name"; nameSpan.textContent = buff.name;
             var descSmall = document.createElement("small"); descSmall.textContent = buff.desc;
             var costDiv = document.createElement("div"); costDiv.className = "shop-cost";
-            costDiv.innerHTML = "Costo: <b>-" + buff.cost.seg + " segmenti</b> + <b>-" + buff.cost.hp + " cuore</b>";
+            var totalHpCost = buff.cost.hp + (buff.hpHiddenCost || 0);
+            costDiv.innerHTML = "Costo: <b>-" + buff.cost.seg + " segmenti</b> + <b>-" + totalHpCost + (totalHpCost > buff.cost.hp ? " cuori" : " cuore") + "</b>";
             if (!affordable) costDiv.innerHTML += " <span style='color:#ef4444'>(non hai abbastanza)</span>";
 
             btn.appendChild(iconB); btn.appendChild(nameSpan); btn.appendChild(descSmall); btn.appendChild(costDiv);

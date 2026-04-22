@@ -161,7 +161,7 @@ function simulateKey(key) {
         if (k === "enter") { if (picks[mIdx]) applyRelic(picks[mIdx]); }
     } else if (mState === "paused") {
         if (k === "arrowup") { mIdx = Math.max(0, mIdx - 1); OVC.querySelectorAll(".btn").forEach(function (b, i) { b.classList.toggle("selected", i === mIdx); }); }
-        if (k === "arrowdown") { mIdx = Math.min(2, mIdx + 1); OVC.querySelectorAll(".btn").forEach(function (b, i) { b.classList.toggle("selected", i === mIdx); }); }
+        if (k === "arrowdown") { mIdx = Math.min(3, mIdx + 1); OVC.querySelectorAll(".btn").forEach(function (b, i) { b.classList.toggle("selected", i === mIdx); }); }
         if (k === "enter") { handlePauseConfirm(); }
     } else if (mState === "dead" && (k === "enter" || k === "back")) {
         showSlotMenu();
