@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Snake Roguelite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="zone-bar">
+        <div id="zone-bar-header">
+            <div>
+                <span id="zone-num">ZONA 1</span>
+                <span id="zone-name">L'ALBERO DI MELE</span>
+            </div>
+            <span id="zone-next-txt">0/8</span>
+        </div>
+        <div id="zone-progress-wrap">
+            <div id="zone-progress"></div>
+        </div>
+    </div>
+    <div id="boss-bar" style="display:none">
+        <div id="boss-name"></div>
+        <div id="boss-hp-wrap"><div id="boss-hp"></div></div>
+    </div>
+    <div id="main-view">
+        <div id="game-col">
+            <div id="game-container">
+                <canvas id="gc" width="300" height="300"></canvas>
+                <div id="overlay">
+                    <div id="overlay-content"></div>
+                </div>
+                <div id="zone-banner">
+                    <div id="banner-num">ZONA 1</div>
+                    <div id="banner-name">L'ALBERO DI MELE</div>
+                </div>
+            </div>
+            <div id="ost-ticker" aria-hidden="true"></div>
+        </div>
+        <div id="side-panel">
+            <div id="hud">
+                <div class="stat">LV <b id="hlv">1</b></div>
+                <div class="stat">XP <b id="hxp">0/5</b></div>
+                <div class="stat">MELE <b id="hsc">0</b></div>
+                <div class="stat">HP <b id="hhp">3</b></div>
+                <div class="stat" id="link-s" style="display:none">LINK <b id="link-st">ATTIVO</b></div>
+                <div class="stat" id="kunai-s" style="display:none">KUNAI <b id="kunai-st">PRONTO</b></div>
+                <div class="stat" id="frammento-s" style="display:none">VUOTO <b id="frammento-st">PRONTO</b></div>
+            </div>
+            <div id="relic-divider"></div>
+            <div id="relic-bar"></div>
+        </div>
+    </div>
+    <div id="touch-hint">DOPPIO TAP = PAUSA</div>
+
+    <!-- 1. Dati puri -->
+    <script src="data/constants.js"></script>
+    <script src="data/codex-db.js"></script>
+    <script src="data/relics.js"></script>
+    <script src="data/zones.js"></script>
+    <script src="data/bosses.js"></script>
+    <script src="data/secrets.js"></script>
+
+    <!-- 2. Audio -->
+    <script src="audio/sfx.js"></script>
+    <script src="audio/music.js"></script>
+
+    <!-- 3. DOM references (must be before render/core) -->
+    <script src="ui/dom-init.js"></script>
+
+    <!-- 4. Stato globale & Salvataggio -->
+    <script src="core/state.js"></script>
+    <script src="core/save.js"></script>
+
+    <!-- 5. Entità -->
+    <script src="entities/enemies.js"></script>
+    <script src="entities/boss-logic.js"></script>
+
+    <!-- 6. Sistemi -->
+    <script src="systems/codex.js"></script>
+    <script src="systems/shop.js"></script>
+    <script src="systems/debug.js"></script>
+
+    <!-- 7. Core game -->
+    <script src="core/game-loop.js"></script>
+    <script src="core/zones.js"></script>
+
+    <!-- 8. Rendering -->
+    <script src="render/theme.js"></script>
+    <script src="render/hud.js"></script>
+    <script src="render/draw.js"></script>
+
+    <!-- 9. FX bridge -->
+    <script src="ui/fx-bridge.js"></script>
+
+    <!-- 10. Input -->
+    <script src="input/keyboard.js"></script>
+    <script src="input/touch.js"></script>
+    <script src="input/gamepad.js"></script>
+</body>
+</html>
