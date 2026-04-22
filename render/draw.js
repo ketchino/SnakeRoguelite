@@ -599,7 +599,7 @@ function draw() {
     var vg = ctx.createRadialGradient(C.width / 2, C.height / 2, C.width * 0.25, C.width / 2, C.height / 2, C.width * 0.7);
     vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.35)");
     ctx.fillStyle = vg; ctx.fillRect(0, 0, C.width, C.height);
-    if (screenFlash > 0) { ctx.fillStyle = flashClr; ctx.fillRect(0, 0, C.width, C.height); if (!debugFrozen) screenFlash--; }
+    // Damage flash rimosso — si mantiene solo lo shake dello schermo
 
     if (relicDelay > 0) {
         if (!debugFrozen) relicDelay -= dt * 1000;
@@ -630,7 +630,8 @@ function draw() {
     }
 }
 
-requestAnimationFrame(function rl() { 
+requestAnimationFrame(function rl(timestamp) { 
+    processTicks(timestamp);
     draw(); 
     requestAnimationFrame(rl); 
 });
@@ -639,16 +640,29 @@ window.addEventListener("resize", function () { if (running || mState === "pause
 resetRB();
 try {
     var splashEl = document.getElementById("splash-screen");
-    function dismissSplash() {
-        if (splashEl.classList.contains("hidden")) return;
+    var splashDismissed = false;
+    function dismissSplash(e) {
+        if (splashDismissed) return;
+        splashDismissed = true;
+        if (e) { e.preventDefault(); e.stopPropagation(); }
         splashEl.classList.add("hidden");
+        // Rimuovi tutti i listener
+        document.removeEventListener("keydown", dismissSplash);
+        document.removeEventListener("keyup", dismissSplash);
+        splashEl.removeEventListener("click", dismissSplash);
+        splashEl.removeEventListener("touchstart", dismissSplash);
+        splashEl.removeEventListener("touchend", dismissSplash);
         // Sblocca audio context nella stessa gesture utente
         if (typeof initAudio === "function") initAudio();
         if (typeof audioCtx !== "undefined" && audioCtx && audioCtx.state === "suspended") audioCtx.resume();
         // Avvia il menu con musica
         showSlotMenu();
     }
+    // Click e touch sullo splash screen
     splashEl.addEventListener("click", dismissSplash);
-    splashEl.addEventListener("touchstart", dismissSplash);
-    splashEl.addEventListener("keydown", dismissSplash);
-} catch(err) { console.error("Errore inizializzazione:", err); showOv(); }
+    splashEl.addEventListener("touchstart", dismissSplash, { passive: false });
+    splashEl.addEventListener("touchend", dismissSplash, { passive: false });
+    // Qualsiasi tasto (keydown + keyup per massima compatibilità)
+    document.addEventListener("keydown", dismissSplash);
+    document.addEventListener("keyup", dismissSplash);
+} catch(err) { console.error("Errore inizializzazione:", err); showSlotMenu(); }

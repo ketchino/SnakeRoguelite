@@ -23,14 +23,21 @@ function useFrammento(G, z, fx) {
 
 function queueInput(G, dx, dy, fx) {
     if (G.pirla) { dx = -dx; dy = -dy; }
-    if (dx === G.dir.x && dy === G.dir.y) return;
     var inp = { x: dx, y: dy };
+    // Block 180° reversal against current direction
+    if (inp.x === -G.dir.x && inp.y === -G.dir.y && !G.inputBuffer.length) return;
+    // Check against last buffered or current direction
     var last = G.inputBuffer.length ? G.inputBuffer[G.inputBuffer.length - 1] : G.dir;
     if (inp.x === -last.x && inp.y === -last.y) return;
-    if (G.inputBuffer.length < 3) {
+    // Skip if identical to last entry (no change needed)
+    if (G.inputBuffer.length && inp.x === last.x && inp.y === last.y) return;
+    // Buffer max 2: when full, replace last entry with latest intent
+    if (G.inputBuffer.length < 2) {
         G.inputBuffer.push(inp);
-        if (fx && fx.sTurn) fx.sTurn();
+    } else {
+        G.inputBuffer[1] = inp;
     }
+    if (fx && fx.sTurn) fx.sTurn();
 }
 
 function takeDamage(G, z, obs, fx, cause) {
@@ -194,8 +201,8 @@ function tick(G, z, fx) {
             }
         }
     }
-    if (!G.isSpawning && !G.preZoneSpawn && G.boss && !G.boss.defeated) tickBoss(G, z, fx);
-    else if (!G.isSpawning && !G.preZoneSpawn) moveEnemies(G, z, fx);
+    if (!G.preZoneSpawn && G.boss && !G.boss.defeated) tickBoss(G, z, fx);
+    else if (!G.preZoneSpawn) moveEnemies(G, z, fx);
     if (G.hp <= 0) return;
 
     var oldDir = { x: G.dir.x, y: G.dir.y };
@@ -218,13 +225,29 @@ function tick(G, z, fx) {
             return;
         }
 
+        // Durante lo spawn il serpente è invincibile: distrugge ostacoli e nemici sul suo percorso
         var spO = null;
         for (var soi = 0; soi < G.obstacles.length; soi++) { if (G.obstacles[soi].x === nx && G.obstacles[soi].y === ny) { spO = G.obstacles[soi]; break; } }
-        if (spO) { G.isSpawning = false; takeDamage(G, z, spO, fx, "Ostacolo"); return; }
+        if (spO) {
+            if (spO.type === "explosive") { G.obstacles.splice(G.obstacles.indexOf(spO), 1); explodeAt(G, z, nx, ny, 0, fx); }
+            else { G.obstacles = G.obstacles.filter(function(o) { return o !== spO; }); if (fx && fx.spawnDP) fx.spawnDP(nx, ny); }
+            if (fx && fx.addF) fx.addF(nx, ny, "DEMOLEZIONE!", "#fbbf24");
+            if (fx && fx.onShake) fx.onShake(3);
+        }
 
         var spE = null;
         for (var sei = 0; sei < G.enemies.length; sei++) { if (G.enemies[sei].x === nx && G.enemies[sei].y === ny) { spE = G.enemies[sei]; break; } }
-        if (spE) { G.isSpawning = false; takeDamage(G, z, null, fx, "Nemico"); return; }
+        if (spE) {
+            if (spE.isBossGuard && G.boss && !G.boss.defeated) {
+                if (!G.foods.some(function(f) { return f.x === nx && f.y === ny; })) {
+                    G.foods.push({ x: nx, y: ny, type: G.boss.collectType });
+                }
+            }
+            G.enemies = G.enemies.filter(function(e) { return e !== spE; });
+            if (fx && fx.spawnEP) fx.spawnEP(nx, ny, "#a855f7");
+            if (fx && fx.addF) fx.addF(nx, ny, "+2", "#a855f7");
+            G.score += 2;
+        }
 
         G.snake.unshift({ x: nx, y: ny });
         if (G.spawnLeft > 0) {
@@ -430,9 +453,11 @@ function tick(G, z, fx) {
          G.enemies = G.enemies.filter(function (e) { return e !== hitEn; });
          var pts = G.snake.length;
          G.score += pts;
-         var t = G.snake[G.snake.length - 1];
-         G.snake.push({ x: t.x, y: t.y });
-         G.snake.push({ x: t.x, y: t.y });
+         if (G.snake.length + 2 <= SNAKE_MAX_LEN) {
+             var t = G.snake[G.snake.length - 1];
+             G.snake.push({ x: t.x, y: t.y });
+             G.snake.push({ x: t.x, y: t.y });
+         }
          if (fx && fx.spawnEP) fx.spawnEP(nx, ny, "#fbbf24");
          if (fx && fx.addF) fx.addF(nx, ny, "REVERSE +" + pts, "#fbbf24");
          G.unoReverse = false;
@@ -761,9 +786,11 @@ function tick(G, z, fx) {
     }
 
     if (!ate) G.snake.pop();
-    if (G.slurp && G.snake.length < z.c * z.r * 0.7) {
+    // Cap lunghezza serpente: se ha superato il massimo, taglia la coda
+    while (G.snake.length > SNAKE_MAX_LEN) G.snake.pop();
+    if (G.slurp && G.snake.length < Math.min(SNAKE_MAX_LEN, z.c * z.r * 0.7)) {
         G.slurpTick++;
-        if (G.slurpTick >= 15) { G.slurpTick = 0; var t = G.snake[G.snake.length - 1]; G.snake.push({ x: t.x, y: t.y }); }
+        if (G.slurpTick >= 15) { G.slurpTick = 0; if (G.snake.length < SNAKE_MAX_LEN) { var t = G.snake[G.snake.length - 1]; G.snake.push({ x: t.x, y: t.y }); } }
     }
     if (z.rg > 0) {
         G.regenTick = (G.regenTick || 0) + 1;
@@ -862,6 +889,11 @@ function tick(G, z, fx) {
     if (fx && fx.onUpdateHUD) fx.onUpdateHUD();
 }
 
+/* ===== rAF ACCUMULATOR TICK SYSTEM ===== */
+var _lastFrameTime = 0;
+var _tickAccumulator = 0;
+var _tickInterval = 195;
+
 function scheduleLoop() {
     clearInterval(loop);
     var interval = 195 * (G.arrow ? G.arrowSpd : G.spd);
@@ -869,5 +901,35 @@ function scheduleLoop() {
         var stonksMult = Math.pow(0.998, G.stonksMeals);
         interval *= Math.max(0.3, stonksMult);
     }
-    loop = setInterval(function () { tick(G, CZ(G), fx); }, Math.max(55, interval));
+    _tickInterval = Math.max(55, interval);
+    // Reset accumulator to prevent tick burst after resume
+    _tickAccumulator = 0;
+    _lastFrameTime = performance.now();
+}
+
+function processTicks(timestamp) {
+    if (!running || paused) {
+        _lastFrameTime = timestamp;
+        return;
+    }
+    var dt = timestamp - _lastFrameTime;
+    _lastFrameTime = timestamp;
+    // Cap dt to prevent huge jumps (e.g., tab was hidden)
+    if (dt > 500) dt = 16;
+    _tickAccumulator += dt;
+    // Process at most 3 ticks per frame to prevent death spirals
+    var maxTicks = 3;
+    while (_tickAccumulator >= _tickInterval && maxTicks > 0) {
+        tick(G, CZ(G), fx);
+        _tickAccumulator -= _tickInterval;
+        maxTicks--;
+        if (!running || paused) {
+            _tickAccumulator = 0;
+            break;
+        }
+    }
+    // Discard excess accumulator to prevent catch-up storms
+    if (_tickAccumulator > _tickInterval * 2) {
+        _tickAccumulator = _tickInterval;
+    }
 }

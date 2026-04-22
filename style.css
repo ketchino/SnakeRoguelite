@@ -77,9 +77,9 @@ body {
 }
 #splash-tap {
     font-family: var(--fd);
-    font-size: 16px;
+    font-size: 12px;
     font-weight: 700;
-    letter-spacing: 4px;
+    letter-spacing: 2px;
     color: var(--text);
     margin-top: 30px;
     animation: splashBlink 1.2s ease-in-out infinite;
@@ -453,6 +453,41 @@ canvas { display: block }
     margin-top: 12px;
 }
 
+/* Slot wrapper per slider */
+.slot-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Slider elimina salvataggio */
+.slot-delete-slider {
+    background: rgba(127,29,29,.7);
+    color: #fca5a5;
+    border: 1px solid rgba(239,68,68,.35);
+    font-family: var(--fd);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    text-align: center;
+    animation: sliderDown 0.25s cubic-bezier(.34,1.56,.64,1) both;
+    transition: background 0.15s;
+    user-select: none;
+    margin-bottom: -1px;
+    position: relative;
+    z-index: 2;
+}
+.slot-delete-slider:hover {
+    background: rgba(185,28,28,.85);
+}
+@keyframes sliderDown {
+    from { transform: translateY(-100%); opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
+    to { transform: translateY(0); opacity: 1; max-height: 30px; }
+}
+
 .slot-btn-h {
     padding: 16px 12px;
     text-align: center;
@@ -604,6 +639,7 @@ canvas { display: block }
     }
     #zone-name { font-size: 16px }
     .slots-grid { grid-template-columns: 1fr; max-width: 340px; }
+    .slot-delete-slider { font-size: 8px; padding: 2px 6px; }
     .slot-btn-h { padding: 14px 10px; }
 }
 /* ===== FAB CODEX BUTTON ===== */

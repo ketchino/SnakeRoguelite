@@ -33,9 +33,16 @@ function trySpawnCrack(G, z) {
 }
 
 function canAffordBuff(G, buff) {
-    var afterSeg = G.snake.length - buff.cost.seg;
+    // Il serpente deve avere più di 4 segmenti (il minimo che viene preservato)
+    if (G.snake.length <= 4) return false;
+    // HP: la fn interna fa Math.max(1, ...) quindi non si muore mai,
+    // ma il costo base hp deve essere pagabile (hp >= 1 dopo il costo base)
     var afterHp = G.hp - buff.cost.hp;
-    return afterSeg >= 4 && afterHp >= 1;
+    if (afterHp < 1) return false;
+    // HP massimo dopo il buff: non deve scendere sotto 1
+    var maxHp = 4 + (G.hpMaxMod || 0) + (buff.hpMaxReduction || 0);
+    if (maxHp < 1) return false;
+    return true;
 }
 
 function applySecretBuff(G, buff) {
@@ -201,7 +208,7 @@ function closeSecretShop(bought) {
     var sLen = G.snake.length;
     G.snake = [];
     for (var i = 0; i < sLen; i++) G.snake.push({ x: sx, y: sy });
-    G.dir = { x: 1, y: 0 }; G.inputBuffer = [];
+    G.inputBuffer = [];
     G.isSpawning = true; G.spawnLeft = sLen;
 
     paused = true; cdTimer = 2; clearInterval(loop);

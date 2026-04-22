@@ -1,8 +1,8 @@
 /* ===== EFFETTI SONORI ===== */
 var audioCtx = null;
-var settingsState = { sfxVol: 1.0, musicVol: 1.0 };
+var settingsState = { sfxVol: 1.0, musicVol: 0.03 };
 
-function loadSettings() { try { var s = JSON.parse(localStorage.getItem("snake_settings")); if (s) { settingsState.sfxVol = s.sfxVol !== undefined ? s.sfxVol : 1.0; settingsState.musicVol = s.musicVol !== undefined ? s.musicVol : 1.0; } } catch(e) {} }
+function loadSettings() { try { var s = JSON.parse(localStorage.getItem("snake_settings")); if (s) { settingsState.sfxVol = s.sfxVol !== undefined ? s.sfxVol : 1.0; settingsState.musicVol = s.musicVol !== undefined ? s.musicVol : 0.03; if (settingsState.musicVol >= 0.3) { settingsState.musicVol = 0.03; saveSettings(); } } } catch(e) {} }
 loadSettings();
 
 function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === "suspended") audioCtx.resume(); }
@@ -30,7 +30,7 @@ function sBossDeath() { tn(523, 0.15, "square", 0.15); setTimeout(function () { 
 
 function saveSettings() { localStorage.setItem("snake_settings", JSON.stringify(settingsState)); }
 function applySettings() {
-    if (musicGainNode) musicGainNode.gain.value = 0.10 * settingsState.musicVol;
+    if (musicGainNode) musicGainNode.gain.value = settingsState.musicVol;
     // Aggiorna volume OST in tempo reale
     if (typeof applyOstVolume === "function") applyOstVolume();
 }

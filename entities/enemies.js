@@ -273,9 +273,11 @@ function moveEnemies(G, z, fx) {
                     G.enemies = G.enemies.filter(function (e) { return e !== en; });
                     var rPts = G.snake.length;
                     G.score += rPts;
-                    var rT = G.snake[G.snake.length - 1];
-                    G.snake.push({ x: rT.x, y: rT.y });
-                    G.snake.push({ x: rT.x, y: rT.y });
+                    if (G.snake.length + 2 <= SNAKE_MAX_LEN) {
+                        var rT = G.snake[G.snake.length - 1];
+                        G.snake.push({ x: rT.x, y: rT.y });
+                        G.snake.push({ x: rT.x, y: rT.y });
+                    }
                     if (fx && fx.spawnEP) fx.spawnEP(en.x, en.y, "#fbbf24");
                     if (fx && fx.addF) fx.addF(en.x, en.y, "REVERSE +" + rPts, "#fbbf24");
                     G.unoReverse = false;
@@ -364,8 +366,10 @@ function explodeAt(G, z, x, y, depth, fx) {
 function triggerSpawn(G, z, len) {
     var sx = Math.floor(z.c / 2);
     var sy = Math.floor(z.r / 2);
+    var lastDir = { x: G.dir.x, y: G.dir.y };
     var dirs = [{ x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 0, y: -1 }];
-    var best = dirs[0], bestS = 0;
+    // Prova prima l'ultima direzione del serpente
+    var best = lastDir, bestS = 0;
     for (var d = 0; d < dirs.length; d++) {
         var sp = 0;
         for (var i = 1; i <= len + 2; i++) {
@@ -375,8 +379,19 @@ function triggerSpawn(G, z, len) {
             if (G.enemies.some(function (e) { return e.x === cx && e.y === cy; })) break;
             sp++;
         }
+        if (dirs[d].x === lastDir.x && dirs[d].y === lastDir.y) bestS = sp; // punteggio direzione attuale
         if (sp > bestS) { bestS = sp; best = dirs[d]; }
     }
+    // Se l'ultima direzione ha spazio sufficiente (almeno 3 celle), mantienila
+    var lastDirScore = 0;
+    for (var li = 1; li <= 3; li++) {
+        var lcx = sx + lastDir.x * li, lcy = sy + lastDir.y * li;
+        if (lcx < 0 || lcx >= z.c || lcy < 0 || lcy >= z.r) break;
+        if (G.obstacles.some(function (o) { return o.x === lcx && o.y === lcy; })) break;
+        if (G.enemies.some(function (e) { return e.x === lcx && e.y === lcy; })) break;
+        lastDirScore++;
+    }
+    if (lastDirScore >= 3) best = lastDir;
     // Verify first 3 cells in spawn direction are safe
     var safeSpawn = true;
     for (var si = 1; si <= 3; si++) {

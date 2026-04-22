@@ -11,7 +11,7 @@ document.addEventListener("touchend", function (e) {
         return;
     }
     lastTap = now;
-    if (tdt > 350 || (Math.abs(dx) < 15 && Math.abs(dy) < 15)) return;
+    if (tdt > 500 || (Math.abs(dx) < 10 && Math.abs(dy) < 10)) return;
     if (Math.abs(dx) > Math.abs(dy)) queueInput(G, dx > 0 ? 1 : -1, 0, fx);
     else queueInput(G, 0, dy > 0 ? 1 : -1, fx);
 }, { passive: true });

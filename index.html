@@ -13,7 +13,7 @@
             <div id="splash-logo">🐍</div>
             <div id="splash-title">SNAKE ROGUELITE</div>
             <div id="splash-sub">7 ZONE • 43 RELIQUIE • 🎵 OST</div>
-            <div id="splash-tap">TAP TO PLAY</div>
+            <div id="splash-tap">PREMI UN TASTO O TOCCA OVUNQUE PER INIZIARE</div>
         </div>
     </div>
     <div id="zone-bar">
@@ -61,6 +61,38 @@
         </div>
     </div>
     <div id="touch-hint">DOPPIO TAP = PAUSA</div>
+
+    <!-- Splash screen handler (must run before other scripts) -->
+    <script>
+    (function() {
+        var splashDismissed = false;
+        function dismissSplash(e) {
+            if (splashDismissed) return;
+            splashDismissed = true;
+            // Blocca la propagazione dell'evento per evitare che il tasto
+            // venga intercettato anche dal keyboard handler del gioco
+            if (e && e.stopPropagation) e.stopPropagation();
+            if (e && e.preventDefault) e.preventDefault();
+            var el = document.getElementById('splash-screen');
+            if (el) el.classList.add('hidden');
+            // Rimuovi subito i listener — lo splash è stato chiuso
+            document.removeEventListener('keydown', dismissSplash, true);
+            document.removeEventListener('click', dismissSplash);
+            document.removeEventListener('touchstart', dismissSplash);
+        }
+        // Chiudi splash con qualsiasi tasto (capture phase per intercettare prima del gioco)
+        document.addEventListener('keydown', dismissSplash, true);
+        // Chiudi splash con click o tocco ovunque
+        document.addEventListener('click', dismissSplash);
+        document.addEventListener('touchstart', dismissSplash);
+        // Rimuovi i listener dopo 10 secondi come fallback
+        setTimeout(function() {
+            document.removeEventListener('keydown', dismissSplash, true);
+            document.removeEventListener('click', dismissSplash);
+            document.removeEventListener('touchstart', dismissSplash);
+        }, 10000);
+    })();
+    </script>
 
     <!-- 1. Dati puri -->
     <script src="data/constants.js"></script>

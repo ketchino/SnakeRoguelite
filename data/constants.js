@@ -1,6 +1,7 @@
 /* ===== COSTANTI & UTILITY ===== */
 var CS = 26;
 var HC = CS / 2;
+var SNAKE_MAX_LEN = 50; // Lunghezza massima del serpente
 
 function h2r(h, a) {
     return "rgba(" + parseInt(h.slice(1, 3), 16) + "," + parseInt(h.slice(3, 5), 16) + "," + parseInt(h.slice(5, 7), 16) + "," + a + ")";

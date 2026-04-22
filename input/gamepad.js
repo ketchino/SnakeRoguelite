@@ -30,7 +30,7 @@ function pollGamepad() {
             var key = "gp_" + gi + "_" + bi;
             if (pressed && !gpPrevButtons[key] && gpInputCooldown <= 0) {
                 simulateKey(dirName);
-                gpInputCooldown = 2;
+                gpInputCooldown = 1;
             }
             gpPrevButtons[key] = pressed;
             if (pressed) {
@@ -54,10 +54,10 @@ function pollGamepad() {
             var prevD = gpPrevDpad[dk] || { x: 0, y: 0 };
             // Only fire if NOT already registered via button D-pad (avoid duplicates)
             if (gpInputCooldown <= 0) {
-                if (dX < -0.5 && prevD.x >= -0.5 && !dpadPressed.left) { simulateKey("arrowleft"); gpInputCooldown = 2; }
-                else if (dX > 0.5 && prevD.x <= 0.5 && !dpadPressed.right) { simulateKey("arrowright"); gpInputCooldown = 2; }
-                if (dY < -0.5 && prevD.y >= -0.5 && !dpadPressed.up) { simulateKey("arrowup"); gpInputCooldown = 2; }
-                else if (dY > 0.5 && prevD.y <= 0.5 && !dpadPressed.down) { simulateKey("arrowdown"); gpInputCooldown = 2; }
+                if (dX < -0.5 && prevD.x >= -0.5 && !dpadPressed.left) { simulateKey("arrowleft"); gpInputCooldown = 1; }
+                else if (dX > 0.5 && prevD.x <= 0.5 && !dpadPressed.right) { simulateKey("arrowright"); gpInputCooldown = 1; }
+                if (dY < -0.5 && prevD.y >= -0.5 && !dpadPressed.up) { simulateKey("arrowup"); gpInputCooldown = 1; }
+                else if (dY > 0.5 && prevD.y <= 0.5 && !dpadPressed.down) { simulateKey("arrowdown"); gpInputCooldown = 1; }
             }
             if (dX < -0.5) dpadPressed.left = true;
             if (dX > 0.5) dpadPressed.right = true;
@@ -73,14 +73,14 @@ function pollGamepad() {
 
         if (gpInputCooldown <= 0) {
             if (axisX < -gpDeadzone && (!gpPrevAxes[gpKey] || gpPrevAxes[gpKey].x >= -gpDeadzone) && !dpadPressed.left) {
-                simulateKey("arrowleft"); gpInputCooldown = 2;
+                simulateKey("arrowleft"); gpInputCooldown = 1;
             } else if (axisX > gpDeadzone && (!gpPrevAxes[gpKey] || gpPrevAxes[gpKey].x <= gpDeadzone) && !dpadPressed.right) {
-                simulateKey("arrowright"); gpInputCooldown = 2;
+                simulateKey("arrowright"); gpInputCooldown = 1;
             }
             if (axisY < -gpDeadzone && (!gpPrevAxes[gpKey] || gpPrevAxes[gpKey].y >= -gpDeadzone) && !dpadPressed.up) {
-                simulateKey("arrowup"); gpInputCooldown = 2;
+                simulateKey("arrowup"); gpInputCooldown = 1;
             } else if (axisY > gpDeadzone && (!gpPrevAxes[gpKey] || gpPrevAxes[gpKey].y <= gpDeadzone) && !dpadPressed.down) {
-                simulateKey("arrowdown"); gpInputCooldown = 2;
+                simulateKey("arrowdown"); gpInputCooldown = 1;
             }
         }
         gpPrevAxes[gpKey] = { x: axisX, y: axisY };

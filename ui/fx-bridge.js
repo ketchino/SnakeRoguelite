@@ -17,7 +17,7 @@ var fx = {
         var sx = Math.floor(bz.c / 2), sy = Math.floor(bz.r / 2);
         G._targetSpawnLen = sLen;
         G.snake = [{ x: sx, y: sy }];
-        G.dir = { x: 1, y: 0 }; G.inputBuffer = [];
+        G.inputBuffer = [];
         G.preZoneSpawn = true;
         updateHUD(); updateZB();
         var bossBar = document.getElementById("boss-bar");
@@ -66,7 +66,6 @@ var fx = {
             spawnEP(G.boss.anchorX, G.boss.anchorY + 1, "#fbbf24");
             spawnEP(G.boss.anchorX + 1, G.boss.anchorY + 1, "#fbbf24");
         }
-        screenFlash = 12; flashClr = "rgba(251,191,36,.3)";
         shakeI = 15;
         G.boss = null;
         G.foods = [];

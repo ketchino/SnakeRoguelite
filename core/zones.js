@@ -54,7 +54,7 @@ function initZone() {
         var sx = Math.floor(z.c / 2), sy = Math.floor(z.r / 2);
         G._targetSpawnLen = sLen;
         G.snake = [{ x: sx, y: sy }];
-        G.dir = { x: 1, y: 0 }; G.inputBuffer = [];
+        G.inputBuffer = [];
         initAmb(); updateHUD(); updateZB();
         ZONE_BAR.style.display = "";
         paused = true; clearInterval(loop);
@@ -79,7 +79,7 @@ function initZone() {
     var sx = Math.floor(z.c / 2), sy = Math.floor(z.r / 2);
     G._targetSpawnLen = sLen;
     G.snake = [{ x: sx, y: sy }];
-    G.dir = { x: 1, y: 0 }; G.inputBuffer = [];
+    G.inputBuffer = [];
     initAmb(); updateHUD(); updateZB();
     ZONE_BAR.style.display = "";
     var zi = G.zoneIndex < ZONES.length ? G.zoneIndex + 1 : "ONDA " + (G.endlessCycle + 1);
@@ -97,7 +97,7 @@ function initZone() {
 function levelUp() {
     paused = true; clearInterval(loop); mState = "leveling";
     if (codexFab) codexFab.style.display = "none";
-    setMS(640, 500); screenFlash = 12; flashClr = "rgba(255,255,255,.3)";
+    setMS(640, 500);
     G.xp -= G.xpNeed; G.level++; G.xpNeed = Math.floor(G.xpNeed * 1.6);
     picks = [];
     var pool = RELICS.filter(function(r) {
@@ -186,7 +186,7 @@ function pauseGame() {
     OVC.appendChild(renderRelList());
     var resumeBtn = document.createElement("div"); resumeBtn.className = "btn slot-btn selected"; resumeBtn.style.marginTop = "12px"; resumeBtn.textContent = "\u25B6\uFE0F RIPRENDI"; resumeBtn.onclick = resumeGame; OVC.appendChild(resumeBtn);
     var settBtn = document.createElement("div"); settBtn.className = "btn slot-btn"; settBtn.style.cssText = "margin-top:8px;opacity:.7"; settBtn.textContent = "\u2699\uFE0F IMPOSTAZIONI"; settBtn.onclick = function () { showSettings(); }; OVC.appendChild(settBtn);
-    var abandonBtn = document.createElement("div"); abandonBtn.className = "btn slot-btn"; abandonBtn.style.cssText = "margin-top:8px;opacity:.5"; abandonBtn.textContent = "\uD83D\uDEAA ABBANDONA"; abandonBtn.onclick = abandonRun; OVC.appendChild(abandonBtn);
+    var abandonBtn = document.createElement("div"); abandonBtn.className = "btn slot-btn"; abandonBtn.style.cssText = "margin-top:8px;opacity:.5"; abandonBtn.textContent = "\uD83D\uDEAA TORNA AL MEN\u00D9"; abandonBtn.onclick = abandonRun; OVC.appendChild(abandonBtn);
     showOv();
 }
 function resumeGame() {
@@ -198,7 +198,7 @@ function resumeGame() {
 }
 function abandonRun() {
     if (codexPanel) { codexPanel.classList.remove('open'); document.body.classList.remove('codex-open'); codexIsOpen = false; }
-     if (G.currentSlot) localStorage.removeItem("snake_slot_" + G.currentSlot); showSlotMenu(); }
+     showSlotMenu(); }
 
 function showGameOver() {
     running = false; mState = "dead"; clearInterval(loop); sDie(); stopMusic(); stopOst();
@@ -290,7 +290,6 @@ function renderCodexScreen() {
 }
 
 function showSlotMenu() {
-    if (G && G.currentSlot) localStorage.removeItem("snake_slot_" + G.currentSlot);
     running = false; paused = false; mState = "slots"; mIdx = 0;
     clearInterval(loop); resetTheme(); resetRB(); setMS(640, 500);
     ZONE_BAR.style.display = "none";
@@ -310,13 +309,29 @@ function renderSlots() {
     [1, 2, 3].forEach(function (s, i) {
         var d = null;
         try { d = JSON.parse(localStorage.getItem("snake_slot_" + s)); } catch(e) { localStorage.removeItem("snake_slot_" + s); }
+        // Wrapper per slider di eliminazione
+        var wrapper = document.createElement("div"); wrapper.className = "slot-wrapper";
+        // Slider elimina salvataggio (sopra il bottone, visibile solo se slot ha dati ED è selezionato)
+        if (d && i === mIdx) {
+            var delSlider = document.createElement("div");
+            delSlider.className = "slot-delete-slider";
+            delSlider.textContent = "\uD83D\uDDD1\uFE0F Elimina salvataggio";
+            delSlider.onclick = function(e) {
+                e.stopPropagation();
+                localStorage.removeItem("snake_slot_" + s);
+                renderSlots();
+            };
+            wrapper.appendChild(delSlider);
+        }
         var btn = document.createElement("div"); btn.className = "btn slot-btn-h" + (i === mIdx ? " selected" : "");
         var zName = "?"; if (d && typeof ZONES !== "undefined") zName = ZONES[Math.min(d.zoneIndex, 6)].name;
         var info = d ? "\u2B50 Lv " + d.level + " \u2022 \uD83C\uDF4E " + d.score + " Mele \u2022 \uD83D\uDDFA\uFE0F " + zName + (d.endlessCycle > 0 ? " Onda " + (d.endlessCycle + 1) : "") + " \u2022 \uD83D\uDEE1\uFE0F " + (d.relics ? d.relics.length : 0) + " rel" : "\uD83C\uDF3F Terreno Incolto";
         var bold = document.createElement("b"); bold.textContent = "\uD83C\uDF3F GIARDINO " + s;
         var small = document.createElement("small"); small.textContent = info;
         btn.appendChild(bold); btn.appendChild(small);
-        btn.onclick = function () { startSlot(s); }; slotsWrap.appendChild(btn);
+        btn.onclick = function () { startSlot(s); };
+        wrapper.appendChild(btn);
+        slotsWrap.appendChild(wrapper);
     });
     OVC.appendChild(slotsWrap);
     // Settings button (index 3)
