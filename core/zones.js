@@ -105,14 +105,18 @@ function levelUp() {
     var pool = RELICS.filter(function(r) {
         if (r.w <= 0) return false;
         if (r.bossRelic) {
-            // Boss relic: include nella pool solo se il boss è già stato sconfitto in una run precedente
+            // Boss relic: include nella pool se il boss è stato sbloccato
+            // (persistente tra le run tramite localStorage)
             var bossId = null;
             var bossMap = {piuma:"corvo",occhiolupo:"lupo",linguarospo:"rospo",coronatiranno:"tiranno",scagliadraga:"draga",frammentovuoto:"vuoto",pelleprimordiale:"primordiale"};
             bossId = bossMap[r.id];
             if (!bossId) return false;
-            // Deve essere stato sconfitto E aver già ricevuto la reliquia (bossRelicsAwarded)
-            return G.bossDefeated && G.bossDefeated.indexOf(bossId) !== -1 &&
-                   G.bossRelicsAwarded && G.bossRelicsAwarded.indexOf(bossId) !== -1;
+            // Se il giocatore ha già questa reliquia nella run corrente, non proporla di nuovo
+            if (G.relics.indexOf(r.id) !== -1) return false;
+            // Controlla sia gli unlock persistenti (localStorage) che quelli della run corrente
+            var persistentUnlocks = loadBossUnlocks();
+            return persistentUnlocks.indexOf(bossId) !== -1 ||
+                   (G.bossRelicsAwarded && G.bossRelicsAwarded.indexOf(bossId) !== -1);
         }
         return true;
     });

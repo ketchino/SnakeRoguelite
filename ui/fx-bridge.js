@@ -34,35 +34,27 @@ var fx = {
             if (!G.bossDefeated) G.bossDefeated = [];
             if (G.bossDefeated.indexOf(bossId) === -1) G.bossDefeated.push(bossId);
         }
-        // Recupera 1 vita quando sconfiggi un boss
+        // Ripristina 1 vita quando sconfiggi un boss (heal, non aggiunge max HP)
         var maxHp = 4 + (G.hpMaxMod || 0);
         if (G.hp < maxHp) {
-            G.hp++;
-            if (G.snake.length > 0) addF(G.snake[0].x, G.snake[0].y, "+1 HP", "#4ade80");
+            G.hp = Math.min(G.hp + 1, maxHp);
+            if (G.snake.length > 0) addF(G.snake[0].x, G.snake[0].y, "HP RIPRISTINATO", "#4ade80");
         }
-        // Award boss-specific relic: SOLO la prima volta che sconfiggi questo boss
+        // Sblocca la reliquia del boss nella pool delle reliquie per le partite successive
+        // Non viene più data direttamente: va trovata nella pool del level-up nelle run future
         var relicId = getBossRelicId(bossId);
-        var isFirstTime = bossId && G.bossDefeated.indexOf(bossId) !== -1 &&
-            (!G.bossRelicsAwarded || G.bossRelicsAwarded.indexOf(bossId) === -1);
+        var isFirstTime = bossId && (!G.bossRelicsAwarded || G.bossRelicsAwarded.indexOf(bossId) === -1);
         if (relicId && isFirstTime) {
-            // Prima sconfitta: dai la reliquia direttamente
+            // Segna come sbloccata nella run corrente
             if (!G.bossRelicsAwarded) G.bossRelicsAwarded = [];
             G.bossRelicsAwarded.push(bossId);
+            // Salva in modo persistente (localStorage) per le run future
+            saveBossUnlock(bossId);
             var bossRelic = RELICS.find(function(r) { return r.id === relicId; });
             if (bossRelic) {
                 discover("rel_" + relicId);
-                if (bossRelic.noStack && G.relics.indexOf(relicId) !== -1) {
-                    bossRelic.fn(G);
-                } else {
-                    G.relics.push(relicId);
-                    bossRelic.fn(G);
-                }
-                var d = document.createElement("div"); d.className = "relic-icon pop";
-                var tip = document.createElement("div"); tip.className = "tip";
-                var tipB = document.createElement("b"); tipB.className = rcClass(bossRelic.ra); tipB.textContent = bossRelic.name;
-                var tipSpan = document.createElement("span"); tipSpan.style.color = "#888"; tipSpan.textContent = bossRelic.desc;
-                tip.appendChild(tipB); tip.appendChild(document.createElement("br")); tip.appendChild(tipSpan);
-                d.textContent = bossRelic.icon; d.appendChild(tip); RBAR.appendChild(d); renderedRC++;
+                // Mostra notifica di sblocco anziché dare la reliquia direttamente
+                if (G.snake.length > 0) addF(G.snake[0].x, G.snake[0].y, "RELIQUIA SBLOCCATA: " + bossRelic.icon + " " + bossRelic.name, "#c084fc");
             }
         }
         if (G.snake.length > 0) {
@@ -83,7 +75,7 @@ var fx = {
         save();
         setTimeout(function () { initZone(); }, 600);
     },
-    onSchedLoop: scheduleLoop,
+    onSchedLoop: function() { scheduleLoop(false); },
     onDiscover: queueDiscovery,
     onCrackEnter: function() {
         paused = true; clearInterval(loop);

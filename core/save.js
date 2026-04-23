@@ -20,3 +20,18 @@ function discover(id) {
 }
 
 function save() { if (G.currentSlot && G.hp > 0 && running) localStorage.setItem("snake_slot_" + G.currentSlot, JSON.stringify(G)); }
+
+/* ===== BOSS RELIC UNLOCKS (persistent across runs) ===== */
+function loadBossUnlocks() {
+    try {
+        return JSON.parse(localStorage.getItem("snake_boss_unlocks")) || [];
+    } catch(e) { return []; }
+}
+
+function saveBossUnlock(bossId) {
+    var unlocks = loadBossUnlocks();
+    if (unlocks.indexOf(bossId) === -1) {
+        unlocks.push(bossId);
+        localStorage.setItem("snake_boss_unlocks", JSON.stringify(unlocks));
+    }
+}

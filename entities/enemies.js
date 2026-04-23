@@ -10,20 +10,23 @@ function CZ(G) { return G.zoneIndex < ZONES.length ? ZONES[G.zoneIndex] : getEZ(
 
 function getEC(G, z) {
     var cx = Math.floor(z.c / 2), cy = Math.floor(z.r / 2);
-    for (var t = 0; t < 600; t++) {
+    // Costruisci set di celle occupate per lookup veloce O(1) invece di .some() O(n)
+    var occupied = {};
+    G.snake.forEach(function(s) { occupied[s.x + ',' + s.y] = true; });
+    G.foods.forEach(function(f) { occupied[f.x + ',' + f.y] = true; });
+    G.obstacles.forEach(function(o) { occupied[o.x + ',' + o.y] = true; });
+    G.enemies.forEach(function(e) { occupied[e.x + ',' + e.y] = true; });
+    if (G.traps) G.traps.forEach(function(tr) { occupied[tr.x + ',' + tr.y] = true; });
+    if (G.boss) bossCells(G.boss).forEach(function(bc) { occupied[bc.x + ',' + bc.y] = true; });
+    for (var t = 0; t < 150; t++) {
         var p = { x: Math.floor(Math.random() * z.c), y: Math.floor(Math.random() * z.r) };
-        if (G.snake.some(function (s) { return s.x === p.x && s.y === p.y; })) continue;
-        if (G.foods.some(function (f) { return f.x === p.x && f.y === p.y; })) continue;
-        if (G.obstacles.some(function (o) { return o.x === p.x && o.y === p.y; })) continue;
-        if (G.enemies.some(function (e) { return e.x === p.x && e.y === p.y; })) continue;
-        if (G.traps && G.traps.some(function (tr) { return tr.x === p.x && tr.y === p.y; })) continue;
-        if (G.boss && bossCells(G.boss).some(function (bc) { return bc.x === p.x && bc.y === p.y; })) continue;
+        if (occupied[p.x + ',' + p.y]) continue;
         if (Math.abs(p.x - cx) <= 2 && Math.abs(p.y - cy) <= 2) continue;
         var adj = [{x:p.x+1,y:p.y},{x:p.x-1,y:p.y},{x:p.x,y:p.y+1},{x:p.x,y:p.y-1}];
         var openAdj = 0;
         for (var ai = 0; ai < adj.length; ai++) {
             if (adj[ai].x >= 0 && adj[ai].x < z.c && adj[ai].y >= 0 && adj[ai].y < z.r &&
-                !G.obstacles.some(function(o){return o.x===adj[ai].x&&o.y===adj[ai].y;})) {
+                !occupied[adj[ai].x + ',' + adj[ai].y]) {
                 openAdj++;
             }
         }

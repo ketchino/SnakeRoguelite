@@ -894,17 +894,28 @@ var _lastFrameTime = 0;
 var _tickAccumulator = 0;
 var _tickInterval = 195;
 
-function scheduleLoop() {
+function scheduleLoop(resetAcc) {
     clearInterval(loop);
     var interval = 195 * (G.arrow ? G.arrowSpd : G.spd);
     if (G.stonks && !G.arrow) {
         var stonksMult = Math.pow(0.998, G.stonksMeals);
         interval *= Math.max(0.3, stonksMult);
     }
-    _tickInterval = Math.max(55, interval);
-    // Reset accumulator to prevent tick burst after resume
-    _tickAccumulator = 0;
-    _lastFrameTime = performance.now();
+    var newInterval = Math.max(55, interval);
+    // Se resetAcc è false (es. chiamata da stonks durante il gioco),
+    // non azzerare l'accumulatore per evitare lo stop/pausa
+    if (resetAcc !== false) {
+        // Reset accumulator to prevent tick burst after resume
+        _tickAccumulator = 0;
+        _lastFrameTime = performance.now();
+    } else if (newInterval !== _tickInterval) {
+        // Se l'intervallo è cambiato ma non azzeriamo l'accumulatore,
+        // ridimensioniamo l'accumulatore per mantenere la proporzione
+        if (_tickInterval > 0) {
+            _tickAccumulator = Math.floor(_tickAccumulator * (newInterval / _tickInterval));
+        }
+    }
+    _tickInterval = newInterval;
 }
 
 function processTicks(timestamp) {
