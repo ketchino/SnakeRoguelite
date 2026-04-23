@@ -74,12 +74,22 @@ document.addEventListener("keydown", function (e) {
     }
     if (mState === "slots") {
         // A/Left, D/Right: navigate between the 3 garden slots (0-2)
-        // W/Up: go up from settings to last garden slot
-        // S/Down: go down to settings (index 3) from any garden slot
-        if (k === "a" || k === "arrowleft") { mIdx = Math.max(0, Math.min(2, mIdx - 1)); renderSlots(); }
-        if (k === "d" || k === "arrowright") { mIdx = Math.min(2, mIdx + 1); renderSlots(); }
-        if (k === "s" || k === "arrowdown") { mIdx = 3; renderSlots(); }
-        if (k === "w" || k === "arrowup") { if (mIdx === 3) { mIdx = 1; } renderSlots(); }
+        // W/Up: go up from delete/settings to slot
+        // S/Down: go down to delete slider (if slot has data) or settings (index 3)
+        var hasSaveData = mIdx < 3 && !!localStorage.getItem("snake_slot_" + (mIdx + 1));
+        if (k === "a" || k === "arrowleft") { slotDeleteFocused = false; mIdx = Math.max(0, Math.min(2, mIdx - 1)); renderSlots(); }
+        if (k === "d" || k === "arrowright") { slotDeleteFocused = false; mIdx = Math.min(2, mIdx + 1); renderSlots(); }
+        if (k === "s" || k === "arrowdown") {
+            if (slotDeleteFocused) { slotDeleteFocused = false; mIdx = 3; }
+            else if (hasSaveData) { slotDeleteFocused = true; }
+            else { mIdx = 3; }
+            renderSlots();
+        }
+        if (k === "w" || k === "arrowup") {
+            if (slotDeleteFocused) { slotDeleteFocused = false; }
+            else if (mIdx === 3) { mIdx = 1; }
+            renderSlots();
+        }
         if (k === " " || k === "enter") { e.preventDefault(); handleSlotConfirm(); }
     } else if (mState === "leveling") {
         if (relicInputLocked) return;
@@ -87,8 +97,8 @@ document.addEventListener("keydown", function (e) {
         if (k === "d" || k === "arrowright") { mIdx = (mIdx + 1) % picks.length; renderRelics(); }
         if (k === " " || k === "enter") { e.preventDefault(); if (picks[mIdx]) applyRelic(picks[mIdx]); }
     } else if (mState === "paused") {
-        if (k === "w" || k === "arrowup") { mIdx = Math.max(0, mIdx - 1); OVC.querySelectorAll(".pause-btns-side .btn").forEach(function (b, i) { b.classList.toggle("selected", i === mIdx); }); }
-        if (k === "s" || k === "arrowdown") { mIdx = Math.min(2, mIdx + 1); OVC.querySelectorAll(".pause-btns-side .btn").forEach(function (b, i) { b.classList.toggle("selected", i === mIdx); }); }
+        if (k === "w" || k === "arrowup") { mIdx = Math.max(0, mIdx - 1); OVC.querySelectorAll(".btn").forEach(function (b, i) { b.classList.toggle("selected", i === mIdx); }); }
+        if (k === "s" || k === "arrowdown") { mIdx = Math.min(2, mIdx + 1); OVC.querySelectorAll(".btn").forEach(function (b, i) { b.classList.toggle("selected", i === mIdx); }); }
         if (k === " " || k === "enter") { e.preventDefault(); handlePauseConfirm(); }
     } else if (mState === "dead" && (k === " " || k === "enter")) {
         e.preventDefault(); showSlotMenu();

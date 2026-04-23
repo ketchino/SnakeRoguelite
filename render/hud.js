@@ -1,5 +1,52 @@
 /* ===== HUD ===== */
 
+// Timer di run — tiene traccia del tempo effettivo di gioco (esclusa la pausa)
+var _timerAccum = 0;  // millisecondi accumulati di gioco effettivo
+var _timerLastActive = 0; // timestamp dell'ultimo momento attivo
+var _timerWasPaused = true; // traccia se eravamo in pausa nel frame precedente
+
+function timerOnStart() {
+    _timerAccum = 0;
+    _timerLastActive = Date.now();
+    _timerWasPaused = false;
+}
+
+function getTimerElapsed() {
+    return Math.floor(_timerAccum / 1000);
+}
+
+function updateTimer() {
+    var timerEl = document.getElementById("run-timer");
+    if (!timerEl) return;
+    // Nascondi il timer quando non si sta giocando
+    if (!running || mState === "slots" || mState === "dead") {
+        timerEl.style.display = "none";
+        return;
+    }
+    // Aggiorna accumulo: se il gioco è attivo (non in pausa), conta il tempo
+    var nowActive = running && !paused;
+    if (nowActive) {
+        if (_timerWasPaused) {
+            // Transizione da pausa a attivo — resetta il riferimento
+            _timerLastActive = Date.now();
+        }
+        _timerAccum += Date.now() - _timerLastActive;
+        _timerLastActive = Date.now();
+    }
+    _timerWasPaused = !nowActive;
+
+    timerEl.style.display = "";
+    var elapsed = getTimerElapsed();
+    var mins = Math.floor(elapsed / 60);
+    var secs = elapsed % 60;
+    var hrs = Math.floor(mins / 60);
+    if (hrs > 0) {
+        timerEl.innerHTML = "<span class=\"timer-icon\">⏱️</span> <span class=\"timer-hrs\">" + hrs + "</span>:<span class=\"timer-mins\">" + (mins % 60 < 10 ? "0" : "") + (mins % 60) + "</span>:<span class=\"timer-secs\">" + (secs < 10 ? "0" : "") + secs + "</span>";
+    } else {
+        timerEl.innerHTML = "<span class=\"timer-icon\">⏱️</span> <span class=\"timer-mins\">" + mins + "</span><span class=\"timer-colon\">:</span><span class=\"timer-secs\">" + (secs < 10 ? "0" : "") + secs + "</span>";
+    }
+}
+
 function updateHUD() {
     if (!G) return;
     document.getElementById("hlv").textContent = "\u2B50 " + G.level;

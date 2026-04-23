@@ -1,4 +1,5 @@
 /* ===== ZONE & MENU CORE ===== */
+var slotDeleteFocused = false;
 
 function startSlot(s) {
     var raw = localStorage.getItem("snake_slot_" + s);
@@ -36,6 +37,7 @@ function startSlot(s) {
     if (codexFab) codexFab.style.display = "none";
     if (codexPanel) { codexPanel.classList.remove('open'); document.body.classList.remove('codex-open'); codexIsOpen = false; }
     setTimeout(function() { try { sEat(); } catch(e){} }, 100); applyTheme(CZ(G)); hideOv(); running = true; paused = true; mState = "";
+    if (typeof timerOnStart === "function") timerOnStart();
     stopMusic(); startMusic();
     setTimeout(function () { initZone(); }, 40);
 }
@@ -213,133 +215,16 @@ function pauseGame() {
     if (mState === "leveling" || relicDelay > 0 || cdTimer > 0) return;
     if (!running) return;
     paused = true; clearInterval(loop); mState = "paused"; mIdx = 0;
-    setMS(640, 500); OVC.textContent = "";
+    setMS(C.width || 360, C.height || 400); OVC.textContent = "";
     if (codexFab) codexFab.style.display = "block";
     if (typeof playPauseMusic === "function") playPauseMusic();
-
-    // Layout a due colonne: reliquie a sinistra, bottoni a destra
-    var layout = document.createElement("div"); layout.className = "pause-layout";
-
-    // --- COLONNA SINISTRA: Lista reliquie ---
-    var relicsSide = document.createElement("div"); relicsSide.className = "pause-relics-side";
-    var relTitle = document.createElement("h2");
-    relTitle.style.cssText = "font-family:var(--fd);color:var(--accent);font-size:18px;letter-spacing:3px;margin-bottom:4px";
-    relTitle.textContent = "\uD83D\uDEE1\uFE0F RELIQUIE";
-    relicsSide.appendChild(relTitle);
-
-    var totalRelics = G.relics.length;
-    var totalCurses = (G.secretBuffs || []).length;
-    var rCount = {};
-    G.relics.forEach(function(id) { rCount[id] = (rCount[id] || 0) + 1; });
-
-    // Sottotitolo conteggio
-    var relSub = document.createElement("div"); relSub.className = "prp-sub"; relSub.style.cssText = "margin-bottom:10px";
-    relSub.textContent = totalRelics + " reliquie" + (totalCurses > 0 ? " \u2022 " + totalCurses + " maledizioni" : "");
-    relicsSide.appendChild(relSub);
-
-    // Stat chips \u2014 somma totale effetti
-    var stats = [];
-    var bonusHp = 0, bonusSpd = 0, bonusXpm = 0, bonusSpf = 0;
-    Object.keys(rCount).forEach(function(id) {
-        var r = RELICS.find(function(p) { return p.id === id; });
-        if (!r) return;
-        var c = rCount[id];
-        if (id === "shield") bonusHp += c;
-        if (id === "speed") bonusSpd += c;
-        if (id === "apple") bonusXpm += c;
-        if (id === "greed") bonusSpf += c;
-        if (id === "god") { bonusHp += 2 * c; bonusXpm += c; }
-        if (id === "omni") { bonusHp += 3 * c; bonusSpf += 2 * c; bonusXpm += c; }
-        if (id === "occhiolupo") bonusHp += c;
-    });
-    if (bonusHp > 0) stats.push("HP +" + bonusHp);
-    if (bonusSpf > 0) stats.push("Mele +" + bonusSpf);
-    if (bonusXpm > 0) stats.push("XP x" + (1 + bonusXpm * 0.5));
-    if (bonusSpd > 0) stats.push("Velocita +" + (bonusSpd * 15) + "%");
-
-    if (stats.length) {
-        var statsDiv = document.createElement("div"); statsDiv.className = "prp-stats";
-        stats.forEach(function(s) {
-            var chip = document.createElement("div"); chip.className = "prp-stat-chip";
-            var parts = s.split(" ");
-            chip.textContent = parts[0] + " ";
-            var b = document.createElement("b"); b.textContent = parts.slice(1).join(" ");
-            chip.appendChild(b);
-            statsDiv.appendChild(chip);
-        });
-        relicsSide.appendChild(statsDiv);
-    }
-
-    // Reliquie ordinate per rarit\u00e0 con titoli di sezione
-    if (totalRelics > 0) {
-        var sortedIds = Object.keys(rCount).sort(function(a, b) {
-            var ra = RELICS.find(function(p) { return p.id === a; });
-            var rb = RELICS.find(function(p) { return p.id === b; });
-            var oa = ra ? (RA_ORDER[ra.ra] !== undefined ? RA_ORDER[ra.ra] : 9) : 9;
-            var ob = rb ? (RA_ORDER[rb.ra] !== undefined ? RA_ORDER[rb.ra] : 9) : 9;
-            return oa - ob;
-        });
-        var currentRa = "";
-        sortedIds.forEach(function(id) {
-            var r = RELICS.find(function(p) { return p.id === id; }); if (!r) return;
-            if (r.ra !== currentRa) {
-                currentRa = r.ra;
-                var secTitle = document.createElement("div"); secTitle.className = "prp-section-title";
-                var raLabels = { mitico: "MITICO", leggendaria: "LEGGENDARIA", epico: "EPICO", raro: "RARO", comune: "COMUNE" };
-                secTitle.textContent = raLabels[currentRa] || currentRa.toUpperCase();
-                relicsSide.appendChild(secTitle);
-            }
-            var count = rCount[id];
-            var row = document.createElement("div"); row.className = "rel-row";
-            var icon = document.createElement("span"); icon.className = "rri"; icon.textContent = r.icon;
-            var inner = document.createElement("div");
-            var nameSpan = document.createElement("span"); nameSpan.className = "rrn " + rcClass(r.ra); nameSpan.textContent = r.name;
-            var descSpan = document.createElement("span"); descSpan.className = "rrd"; descSpan.textContent = r.desc;
-            inner.appendChild(nameSpan); inner.appendChild(descSpan); row.appendChild(icon); row.appendChild(inner);
-            if (count > 1) {
-                var cnt = document.createElement("span"); cnt.className = "rr-count"; cnt.textContent = "x" + count; row.appendChild(cnt);
-            }
-            relicsSide.appendChild(row);
-        });
-    }
-
-    // Sezione Maledizioni
-    if (totalCurses > 0) {
-        var curseTitle = document.createElement("div"); curseTitle.className = "prp-section-title curse-title";
-        curseTitle.textContent = "MALEDIZIONI";
-        relicsSide.appendChild(curseTitle);
-        G.secretBuffs.forEach(function(id) {
-            var b = SECRET_BUFFS.find(function(p) { return p.id === id; }); if (!b) return;
-            var row = document.createElement("div"); row.className = "rel-row curse-row";
-            var icon = document.createElement("span"); icon.className = "rri"; icon.textContent = b.icon;
-            var inner = document.createElement("div");
-            var nameSpan = document.createElement("span"); nameSpan.className = "rrn"; nameSpan.textContent = b.name;
-            var descSpan = document.createElement("span"); descSpan.className = "rrd"; descSpan.textContent = b.desc;
-            inner.appendChild(nameSpan); inner.appendChild(descSpan); row.appendChild(icon); row.appendChild(inner);
-            relicsSide.appendChild(row);
-        });
-    }
-
-    if (totalRelics === 0 && totalCurses === 0) {
-        var empty = document.createElement("div"); empty.style.cssText = "color:#555;font-size:12px;text-align:center;margin-top:20px";
-        empty.textContent = "Nessuna reliquia o maledizione";
-        relicsSide.appendChild(empty);
-    }
-
-    // --- COLONNA DESTRA: Bottoni pausa ---
-    var btnsSide = document.createElement("div"); btnsSide.className = "pause-btns-side";
-    var h2 = document.createElement("h2");
-    h2.style.cssText = "font-family:var(--fd);color:var(--accent);font-size:24px;letter-spacing:4px";
-    h2.textContent = "\u23F8\uFE0F PAUSA";
-    btnsSide.appendChild(h2);
-    var resumeBtn = document.createElement("div"); resumeBtn.className = "btn slot-btn selected"; resumeBtn.style.marginTop = "12px"; resumeBtn.textContent = "\u25B6\uFE0F RIPRENDI"; resumeBtn.onclick = resumeGame; btnsSide.appendChild(resumeBtn);
-    var settBtn = document.createElement("div"); settBtn.className = "btn slot-btn"; settBtn.style.cssText = "margin-top:8px;opacity:.7"; settBtn.textContent = "\u2699\uFE0F IMPOSTAZIONI"; settBtn.onclick = function () { showSettings(); }; btnsSide.appendChild(settBtn);
-    var abandonBtn = document.createElement("div"); abandonBtn.className = "btn slot-btn"; abandonBtn.style.cssText = "margin-top:8px;opacity:.5"; abandonBtn.textContent = "\uD83D\uDEAA TORNA AL MEN\u00D9"; abandonBtn.onclick = abandonRun; btnsSide.appendChild(abandonBtn);
-
-    layout.appendChild(relicsSide);
-    layout.appendChild(btnsSide);
-    OVC.appendChild(layout);
+    var h2 = document.createElement("h2"); h2.style.cssText = "font-family:var(--fd);color:var(--accent);font-size:24px;letter-spacing:4px"; h2.textContent = "\u23F8\uFE0F PAUSA"; OVC.appendChild(h2);
+    var resumeBtn = document.createElement("div"); resumeBtn.className = "btn slot-btn selected"; resumeBtn.style.marginTop = "12px"; resumeBtn.textContent = "\u25B6\uFE0F RIPRENDI"; resumeBtn.onclick = resumeGame; OVC.appendChild(resumeBtn);
+    var settBtn = document.createElement("div"); settBtn.className = "btn slot-btn"; settBtn.style.cssText = "margin-top:8px;opacity:.7"; settBtn.textContent = "\u2699\uFE0F IMPOSTAZIONI"; settBtn.onclick = function () { showSettings(); }; OVC.appendChild(settBtn);
+    var abandonBtn = document.createElement("div"); abandonBtn.className = "btn slot-btn"; abandonBtn.style.cssText = "margin-top:8px;opacity:.5"; abandonBtn.textContent = "\uD83D\uDEAA TORNA AL MEN\u00D9"; abandonBtn.onclick = abandonRun; OVC.appendChild(abandonBtn);
     showOv();
+    // Apri automaticamente il pannello reliquie a sinistra
+    openPauseRelicPanel();
 }
 function resumeGame() {
     closePauseRelicPanel();
@@ -477,6 +362,7 @@ function closePauseRelicPanel() {
 
 function showGameOver() {
     running = false; mState = "dead"; clearInterval(loop); sDie(); stopMusic(); stopOst();
+    closePauseRelicPanel();
     if (codexFab) codexFab.style.display = "none";
     if (codexPanel) { codexPanel.classList.remove('open'); document.body.classList.remove('codex-open'); codexIsOpen = false; }
     if (G.currentSlot) { localStorage.removeItem("snake_slot_" + G.currentSlot); G.currentSlot = null; }
@@ -565,9 +451,10 @@ function renderCodexScreen() {
 }
 
 function showSlotMenu() {
-    running = false; paused = false; mState = "slots"; mIdx = 0;
+    running = false; paused = false; mState = "slots"; mIdx = 0; slotDeleteFocused = false;
     clearInterval(loop); resetTheme(); resetRB(); setMS(640, 500);
     ZONE_BAR.style.display = "none";
+    closePauseRelicPanel();
     var bb = document.getElementById("boss-bar"); if (bb) bb.style.display = "none";
     initCodexUI(); codexFab.style.display = "block";
     if (codexPanel) { codexPanel.classList.remove('open'); document.body.classList.remove('codex-open'); codexIsOpen = false; }
@@ -584,34 +471,36 @@ function renderSlots() {
     [1, 2, 3].forEach(function (s, i) {
         var d = null;
         try { d = JSON.parse(localStorage.getItem("snake_slot_" + s)); } catch(e) { localStorage.removeItem("snake_slot_" + s); }
-        // Wrapper per slider di eliminazione
         var wrapper = document.createElement("div"); wrapper.className = "slot-wrapper";
-        // Slider elimina salvataggio — scivola fuori da dietro lo slot (solo se selezionato con dati)
+        // Bottone dello slot (sempre prima nel DOM)
+        var isSlotSel = i === mIdx && !slotDeleteFocused;
+        var btn = document.createElement("div"); btn.className = "btn slot-btn-h" + (i === mIdx ? " selected" : "");
+        if (slotDeleteFocused && i === mIdx) btn.classList.remove("selected");
+        var zName = "?"; if (d && typeof ZONES !== "undefined") zName = ZONES[Math.min(d.zoneIndex, 6)].name;
+        var info = d ? "\u2B50 Lv " + d.level + " \u2022 \uD83C\uDF4E " + d.score + " Mele \u2022 \uD83D\uDDFA\uFE0F " + zName + (d.endlessCycle > 0 ? " Onda " + (d.endlessCycle + 1) : "") + " \u2022 \uD83D\uDEE1\uFE0F " + (d.relics ? d.relics.length : 0) + " rel" : "\uD83C\uDF3F Terreno Incolto";
+        var bold = document.createElement("b"); bold.textContent = "\uD83C\uDF3F GIARDINO " + s;
+        var small = document.createElement("small"); small.textContent = info;
+        btn.appendChild(bold); btn.appendChild(small);
+        btn.onclick = function () { slotDeleteFocused = false; startSlot(s); };
+        wrapper.appendChild(btn);
+        // Slider elimina salvataggio — sotto il bottone (solo se selezionato con dati)
         if (d && i === mIdx) {
             var delSlider = document.createElement("div");
-            delSlider.className = "slot-delete-slider";
+            delSlider.className = "slot-delete-slider" + (slotDeleteFocused ? " focused" : "");
             delSlider.textContent = "\uD83D\uDDD1\uFE0F Elimina salvataggio";
             delSlider.onclick = function(e) {
                 e.stopPropagation();
                 localStorage.removeItem("snake_slot_" + s);
+                slotDeleteFocused = false;
                 renderSlots();
             };
             wrapper.appendChild(delSlider);
-            // Anima lo slider: aggiungi 'visible' dopo un frame per far scattare la transizione CSS
             requestAnimationFrame(function() {
                 requestAnimationFrame(function() {
                     delSlider.classList.add("visible");
                 });
             });
         }
-        var btn = document.createElement("div"); btn.className = "btn slot-btn-h" + (i === mIdx ? " selected" : "");
-        var zName = "?"; if (d && typeof ZONES !== "undefined") zName = ZONES[Math.min(d.zoneIndex, 6)].name;
-        var info = d ? "\u2B50 Lv " + d.level + " \u2022 \uD83C\uDF4E " + d.score + " Mele \u2022 \uD83D\uDDFA\uFE0F " + zName + (d.endlessCycle > 0 ? " Onda " + (d.endlessCycle + 1) : "") + " \u2022 \uD83D\uDEE1\uFE0F " + (d.relics ? d.relics.length : 0) + " rel" : "\uD83C\uDF3F Terreno Incolto";
-        var bold = document.createElement("b"); bold.textContent = "\uD83C\uDF3F GIARDINO " + s;
-        var small = document.createElement("small"); small.textContent = info;
-        btn.appendChild(bold); btn.appendChild(small);
-        btn.onclick = function () { startSlot(s); };
-        wrapper.appendChild(btn);
         slotsWrap.appendChild(wrapper);
     });
     OVC.appendChild(slotsWrap);
@@ -626,7 +515,11 @@ function renderSlots() {
 
 // Handle confirm in slot menu (3 slots + settings = 4 items, indices 0-3)
 function handleSlotConfirm() {
-    if (mIdx < 3) { startSlot(mIdx + 1); }
+    if (slotDeleteFocused && mIdx < 3) {
+        localStorage.removeItem("snake_slot_" + (mIdx + 1));
+        slotDeleteFocused = false;
+        renderSlots();
+    } else if (mIdx < 3) { startSlot(mIdx + 1); }
     else if (mIdx === 3) { showSettings(); }
 }
 

@@ -28,11 +28,20 @@
             <div id="zone-progress"></div>
         </div>
     </div>
+    <div id="run-timer">⏱️ 0:00</div>
     <div id="boss-bar" style="display:none">
         <div id="boss-name"></div>
         <div id="boss-hp-wrap"><div id="boss-hp"></div></div>
     </div>
     <div id="main-view">
+        <!-- Pannello reliquie a sinistra della mappa (visibile solo in pausa) -->
+        <div id="pause-relic-panel">
+            <div class="prp-header">
+                <h2>🛡️ RELIQUIE</h2>
+                <div class="prp-sub" id="prp-sub"></div>
+            </div>
+            <div class="prp-content" id="prp-content"></div>
+        </div>
         <div id="game-col">
             <div id="game-container">
                 <canvas id="gc" width="300" height="300"></canvas>
@@ -61,16 +70,6 @@
         </div>
     </div>
     <div id="touch-hint">DOPPIO TAP = PAUSA</div>
-
-    <!-- Pause relic panel (left side) -->
-    <div id="pause-relic-panel">
-        <div class="prp-header">
-            <span class="prp-close-btn" id="prp-close">&times;</span>
-            <h2>🛡️ RELIQUIE</h2>
-            <div class="prp-sub" id="prp-sub"></div>
-        </div>
-        <div class="prp-content" id="prp-content"></div>
-    </div>
 
     <!-- Splash screen handler (must run before other scripts) -->
     <script>

@@ -34,6 +34,12 @@ var fx = {
             if (!G.bossDefeated) G.bossDefeated = [];
             if (G.bossDefeated.indexOf(bossId) === -1) G.bossDefeated.push(bossId);
         }
+        // Recupera 1 vita quando sconfiggi un boss
+        var maxHp = 4 + (G.hpMaxMod || 0);
+        if (G.hp < maxHp) {
+            G.hp++;
+            if (G.snake.length > 0) addF(G.snake[0].x, G.snake[0].y, "+1 HP", "#4ade80");
+        }
         // Award boss-specific relic: SOLO la prima volta che sconfiggi questo boss
         var relicId = getBossRelicId(bossId);
         var isFirstTime = bossId && G.bossDefeated.indexOf(bossId) !== -1 &&

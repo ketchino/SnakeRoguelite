@@ -24,7 +24,7 @@ var RELICS = [
     { id: "arrow", name: "Arrow in the Knee", icon: "🏹", desc: "La tua velocità attuale viene bloccata, ma guadagni il 50% di punti in più.", ra: "raro", w: 16, fn: function (g) { g.arrow = true; g.arrowSpd = g.spd; } },
     { id: "trappola", name: "Trappola", icon: "🪤", desc: "Ogni volta che curvi, lasci una trappola mortale dietro di te.", ra: "raro", w: 14, fn: function (g) { g.trappola = true; } },
     { id: "nostalgia", name: "Nostalgia", icon: "🎵", desc: "Mangiare spaventa i nemici vicini, costringendoli ad allontanarsi.", ra: "raro", w: 15, fn: function (g) { g.nostalgia = true; } },
-    { id: "nabbo", name: "Aiuto Nabbo", icon: "🤝", desc: "Raccogli automaticamente i frutti che si trovano nelle celle diagonali vicine.", ra: "raro", w: 17, fn: function (g) { g.nabbo = true; } },
+    { id: "nabbo", name: "Aiuto Nabbo", icon: "🤝", desc: "Raccogli automaticamente i frutti che si trovano nelle celle diagonali vicine.", ra: "epico", w: 12, fn: function (g) { g.nabbo = true; } },
     { id: "vortex", name: "Vortice", icon: "🌀", desc: "Ogni frutto raccolto distrugge un muro solido nelle vicinanze.", ra: "epico", w: 14, fn: function (g) { g.vortex = true; } },
     { id: "hulk", name: "Hulkmania", icon: "💪", desc: "Sfondi i muri a testate, ma ogni impatto ti costa alcuni segmenti della coda.", ra: "epico", w: 13, fn: function (g) { g.hulk = true; } },
     { id: "praise", name: "Praise the Sun", icon: "🍗", desc: "Ogni 3 mele: un'onda solare polverizza le rocce fragili intorno a te.", ra: "epico", w: 12, fn: function (g) { g.praise = true; } },

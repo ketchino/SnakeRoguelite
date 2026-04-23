@@ -465,15 +465,17 @@ canvas { display: block }
 .slot-wrapper {
     position: relative;
     border-radius: 12px;
+    overflow: visible;
 }
 
-/* Slider elimina salvataggio — scivola fuori da dietro lo slot */
+/* Slider elimina salvataggio — scivola fuori sotto lo slot */
 .slot-delete-slider {
     background: rgba(127,29,29,.85);
     color: #fca5a5;
     border: none;
     border-top: 1px solid rgba(239,68,68,.35);
-    border-radius: 0 0 12px 12px;
+    border-radius: 0 0 10px 10px;
+    margin-top: -1px;
     font-family: var(--fd);
     font-size: 9px;
     font-weight: 700;
@@ -507,9 +509,18 @@ canvas { display: block }
     align-items: center;
     gap: 6px;
 }
-/* Quando lo slider è presente, il bottone ha angoli smussati solo sopra */
+/* Quando lo slider è presente, il bottone mantiene il bordo completo su tutti i lati */
 .slot-wrapper:has(.slot-delete-slider) .slot-btn-h {
-    border-radius: 12px 12px 0 0;
+    border-radius: 12px;
+}
+
+/* Slider elimina con focus da tastiera/gamepad */
+.slot-delete-slider.focused {
+    background: rgba(185,28,28,.95);
+    border: 1px solid #f87171;
+    border-top: 1px solid rgba(239,68,68,.5);
+    box-shadow: 0 0 14px rgba(248,113,113,.35);
+    transform: scale(1.02);
 }
 
 .slot-btn-h b {
@@ -581,31 +592,7 @@ canvas { display: block }
 .ds { font-family: var(--fd); font-size: 14px; color: #888; margin: 4px 0 }
 .ds b { color: var(--accent) }
 
-/* ===== PAUSE LAYOUT (due colonne: reliquie + bottoni) ===== */
-.pause-layout {
-    display: flex;
-    width: 100%;
-    gap: 20px;
-    align-items: flex-start;
-    min-height: 0;
-}
-.pause-relics-side {
-    flex: 1;
-    overflow-y: auto;
-    text-align: left;
-    max-height: 430px;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,.1) transparent;
-    padding-right: 6px;
-}
-.pause-btns-side {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    min-width: 180px;
-    flex-shrink: 0;
-}
+/* ===== PAUSE LAYOUT ===== */
 
 /* ===== RELIC LIST ===== */
 .rel-list {
@@ -641,59 +628,47 @@ canvas { display: block }
 .rel-row .rrd { color: #555; font-size: 12px; display: block }
 .rel-row .rr-count { font-family: var(--fd); font-size: 11px; font-weight: 700; color: #888; letter-spacing: .5px; margin-left: auto; flex-shrink: 0; white-space: nowrap }
 
-/* ===== PAUSE RELIC PANEL (left side) ===== */
+/* ===== PAUSE RELIC PANEL (a sinistra della mappa, visibile solo in pausa) ===== */
 #pause-relic-panel {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: min(320px, 85vw);
-    height: 100vh;
-    background: rgba(8, 8, 12, 0.96);
-    backdrop-filter: blur(12px);
-    border-right: 1px solid var(--border);
-    z-index: 55;
-    transform: translateX(-100%);
-    transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    display: flex;
+    display: none; /* Nascosto di default, mostrato solo in pausa */
     flex-direction: column;
-    box-shadow: 10px 0 40px rgba(0,0,0,0.6);
+    background: var(--card);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    overflow: hidden;
+    /* Stessa altezza del game-container, larghezza simile */
+    width: 340px;
+    min-width: 300px;
+    flex-shrink: 0;
 }
-#pause-relic-panel.open { transform: translateX(0); }
+#pause-relic-panel.open {
+    display: flex;
+}
 
 .prp-header {
-    padding: 18px 18px 0;
+    padding: 14px 16px 10px;
     border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
 }
 .prp-header h2 {
     font-family: var(--fd);
     color: var(--accent);
-    font-size: 18px;
+    font-size: 16px;
     letter-spacing: 3px;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 .prp-header .prp-sub {
     font-family: var(--fd);
     color: #555;
     font-size: 10px;
-    letter-spacing: 2px;
-    margin-bottom: 12px;
+    letter-spacing: 1.5px;
+    margin-bottom: 0;
 }
-.prp-close-btn {
-    color: var(--accent);
-    font-size: 20px;
-    font-weight: 900;
-    cursor: pointer;
-    float: right;
-    margin-top: -2px;
-    margin-left: 12px;
-    transition: transform 0.15s, color 0.15s;
-    user-select: none;
-}
-.prp-close-btn:hover { transform: scale(1.2); }
 
 .prp-content {
     flex: 1;
-    padding: 12px 14px;
+    padding: 10px 12px;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,0.1) transparent;
@@ -701,17 +676,17 @@ canvas { display: block }
 
 .prp-stats {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 .prp-stat-chip {
     background: rgba(255,255,255,.04);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 6px 10px;
+    padding: 5px 8px;
     font-family: var(--fd);
-    font-size: 11px;
+    font-size: 10px;
     letter-spacing: .5px;
     color: #888;
     white-space: nowrap;
@@ -725,14 +700,14 @@ canvas { display: block }
     letter-spacing: 2px;
     color: #444;
     text-transform: uppercase;
-    margin: 10px 0 6px;
-    padding-bottom: 4px;
+    margin: 8px 0 5px;
+    padding-bottom: 3px;
     border-bottom: 1px solid rgba(255,255,255,.04);
 }
 .prp-section-title.curse-title { color: #7c3aed; border-bottom-color: rgba(168,85,247,.15); }
 
 @media (max-width: 650px) {
-    #pause-relic-panel { width: min(280px, 85vw); }
+    #pause-relic-panel { width: 100%; min-width: auto; }
 }
 
 #touch-hint {
@@ -755,17 +730,6 @@ canvas { display: block }
 
 /* ===== MOBILE ===== */
 @media (max-width: 650px) {
-    .pause-layout {
-        flex-direction: column;
-        gap: 12px;
-    }
-    .pause-relics-side {
-        max-height: 200px;
-    }
-    .pause-btns-side {
-        min-width: auto;
-        width: 100%;
-    }
     #main-view {
         flex-direction: column;
         align-items: center;
@@ -986,6 +950,43 @@ body:not(.codex-open) #game-container { transition: filter 0.3s, transform 0.3s;
     color: #555;
 }
 
+/* ===== RUN TIMER ===== */
+#run-timer {
+    width: 100%;
+    max-width: 740px;
+    text-align: center;
+    flex-shrink: 0;
+    padding: 4px 0;
+    transition: opacity .3s;
+}
+#run-timer .timer-icon {
+    font-size: 12px;
+    vertical-align: middle;
+    opacity: 0.5;
+}
+#run-timer .timer-mins,
+#run-timer .timer-hrs,
+#run-timer .timer-secs {
+    font-family: var(--fd);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #666;
+    vertical-align: middle;
+}
+#run-timer .timer-colon {
+    font-family: var(--fd);
+    font-size: 14px;
+    font-weight: 700;
+    color: #444;
+    animation: timerBlink 1s step-end infinite;
+    vertical-align: middle;
+}
+@keyframes timerBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
 /* ===== BOSS HP BAR ===== */
 #boss-bar {
     width: 100%;
@@ -994,10 +995,10 @@ body:not(.codex-open) #game-container { transition: filter 0.3s, transform 0.3s;
     text-align: center;
     animation: bossBarIn 0.5s ease-out;
     flex-shrink: 0;
-    background: var(--card);
+    background: rgba(15, 5, 5, 0.9);
     backdrop-filter: blur(8px);
-    border: 1px solid var(--border);
-    border-radius: 13px;
+    border: 1px solid rgba(248, 113, 113, 0.2);
+    border-radius: 10px;
 }
 
 #boss-name {

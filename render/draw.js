@@ -14,6 +14,8 @@ if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D
 
 function draw() {
     var now = performance.now(), dt = (now - lastTime) / 1000; lastTime = now;
+    // Aggiorna il timer di run
+    if (typeof updateTimer === "function") updateTimer();
     // Pausa assoluta quando il debug è aperto: congela tutti i timer
     var debugFrozen = typeof debugIsOpen !== 'undefined' && debugIsOpen;
     if (running && !paused && !debugFrozen) {

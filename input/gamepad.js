@@ -151,8 +151,20 @@ function simulateKey(key) {
         if (mState === "slots" || mState === "paused") { toggleCodex(); return; }
     }
     if (mState === "slots") {
-        if (k === "arrowup") { mIdx = Math.max(0, mIdx - 1); if (mIdx > 3) mIdx = 3; renderSlots(); }
-        if (k === "arrowdown") { mIdx = Math.min(3, mIdx + 1); renderSlots(); }
+        var hasSaveData = mIdx < 3 && !!localStorage.getItem("snake_slot_" + (mIdx + 1));
+        if (k === "arrowup") {
+            if (slotDeleteFocused) { slotDeleteFocused = false; }
+            else { mIdx = Math.max(0, mIdx - 1); if (mIdx > 3) mIdx = 3; }
+            renderSlots();
+        }
+        if (k === "arrowdown") {
+            if (slotDeleteFocused) { slotDeleteFocused = false; mIdx = 3; }
+            else if (hasSaveData) { slotDeleteFocused = true; }
+            else { mIdx = Math.min(3, mIdx + 1); }
+            renderSlots();
+        }
+        if (k === "arrowleft") { slotDeleteFocused = false; mIdx = Math.max(0, Math.min(2, mIdx - 1)); renderSlots(); }
+        if (k === "arrowright") { slotDeleteFocused = false; mIdx = Math.min(2, mIdx + 1); renderSlots(); }
         if (k === "enter") { handleSlotConfirm(); }
     } else if (mState === "leveling") {
         if (relicInputLocked) return;

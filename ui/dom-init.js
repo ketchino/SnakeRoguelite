@@ -7,6 +7,3 @@ var CONT = document.getElementById("game-container");
 var RBAR = document.getElementById("relic-bar");
 var ZONE_BAR = document.getElementById("zone-bar");
 var SIDE_PANEL = document.getElementById("side-panel");
-// Pause relic panel close button
-var prpClose = document.getElementById("prp-close");
-if (prpClose) prpClose.onclick = function() { closePauseRelicPanel(); };

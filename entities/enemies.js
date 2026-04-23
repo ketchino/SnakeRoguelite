@@ -418,7 +418,7 @@ function triggerSpawn(G, z, len) {
     G.inputBuffer = [];
     G.isSpawning = true;
     G.spawnLeft = Math.max(0, len - 1);
-    G.invincible = G.spawnLeft + 4;
+    G.invincible = Math.min(G.spawnLeft + 4, 8);
     // Nessuna particella allo spawn — lo srotolamento è visivo puro
 }
 
