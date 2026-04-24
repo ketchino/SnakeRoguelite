@@ -5,3 +5,6 @@ var shakeX = 0, shakeY = 0, shakeI = 0, relicDelay = 0, cdTimer = 0;
 var lastTime = performance.now(), gridPulse = 0, renderedRC = 0;
 var codexFab = null, codexPanel = null, codexIsOpen = false, activeTab = 'zone';
 var discoveryQueue = [], relicInputLocked = false;
+var selectedDifficulty = "default"; // "peaceful", "default", "hardcore"
+var pendingSlot = 0; // Slot selezionato in attesa della difficoltà
+var settingsIdx = 0; // Indice riga impostazioni selezionata (0=SFX, 1=Musica, 2=Indietro)

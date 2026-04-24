@@ -10,6 +10,14 @@ var fx = {
     onUpdateHUD: updateHUD, onUpdateZB: updateZB, onDead: showGameOver, onLevelUp: levelUp,
     onZoneComplete: function () { G.zoneFood = 0; save(); initZone(); },
     onBossStart: function (bossDef) {
+        // Peaceful: skip boss entirely
+        if (G.difficulty === "peaceful") {
+            if (G.zoneIndex < ZONES.length - 1) { G.zoneIndex++; } else { G.endlessCycle++; }
+            G.zoneFood = 0;
+            save();
+            initZone();
+            return;
+        }
         initBoss(G, CZ(G), bossDef, fx);
         // Riposiziona il serpente al centro per la boss fight (solo testa, si srotola)
         var bz = CZ(G);
@@ -35,7 +43,7 @@ var fx = {
             if (G.bossDefeated.indexOf(bossId) === -1) G.bossDefeated.push(bossId);
         }
         // Ripristina 1 vita quando sconfiggi un boss (heal, non aggiunge max HP)
-        var maxHp = 4 + (G.hpMaxMod || 0);
+        var maxHp = Math.max(1, 4 + (G.hpMaxMod || 0));
         if (G.hp < maxHp) {
             G.hp = Math.min(G.hp + 1, maxHp);
             if (G.snake.length > 0) addF(G.snake[0].x, G.snake[0].y, "HP RIPRISTINATO", "#4ade80");

@@ -35,16 +35,11 @@ function trySpawnCrack(G, z) {
 function canAffordBuff(G, buff) {
     // Il serpente deve avere più di 4 segmenti (il minimo che viene preservato)
     if (G.snake.length <= 4) return false;
-    // HP: la fn interna di alcuni buff toglie un cuore extra (hpHiddenCost),
-    // oltre al costo base. Il totale effettivo è cost.hp + hpHiddenCost.
-    // La fn interna fa Math.max(1, ...) quindi non si muore mai,
-    // ma il giocatore deve avere abbastanza HP per coprire il costo totale.
-    var totalHpCost = buff.cost.hp + (buff.hpHiddenCost || 0);
-    var afterHp = G.hp - totalHpCost;
-    if (afterHp < 1) return false;
-    // HP massimo dopo il buff: non deve scendere sotto 1
-    var maxHp = 4 + (G.hpMaxMod || 0) + (buff.hpMaxReduction || 0);
-    if (maxHp < 1) return false;
+    // HP: il costo riduce i cuori MASSIMI (come i patti del diavolo in Isaac)
+    // Il nuovo max HP non deve scendere sotto 1
+    var totalHpCost = buff.cost.hp;
+    var newMaxHp = 4 + (G.hpMaxMod || 0) - totalHpCost;
+    if (newMaxHp < 1) return false;
     return true;
 }
 
@@ -52,9 +47,12 @@ function applySecretBuff(G, buff) {
     // Rimuovi segmenti
     var removeSeg = buff.cost.seg;
     while (G.snake.length > 4 && removeSeg > 0) { G.snake.pop(); removeSeg--; }
-    // Rimuovi cuore
-    G.hp -= buff.cost.hp;
-    if (G.hp < 1) G.hp = 1;
+    // Rimuovi cuori MASSIMI (come i patti del diavolo in Isaac)
+    G.hpMaxMod = (G.hpMaxMod || 0) - buff.cost.hp;
+    var newMaxHp = 4 + (G.hpMaxMod || 0);
+    if (newMaxHp < 1) { G.hpMaxMod = -3; newMaxHp = 1; } // Garantisce almeno 1 cuore massimo
+    // Se il HP corrente supera il nuovo massimo, clampalo
+    if (G.hp > newMaxHp) G.hp = newMaxHp;
     // Applica il buff
     buff.fn(G);
     // Registra nel codex
@@ -119,8 +117,8 @@ function renderSecretShop() {
             var nameSpan = document.createElement("span"); nameSpan.className = "shop-buff-name"; nameSpan.textContent = buff.name;
             var descSmall = document.createElement("small"); descSmall.textContent = buff.desc;
             var costDiv = document.createElement("div"); costDiv.className = "shop-cost";
-            var totalHpCost = buff.cost.hp + (buff.hpHiddenCost || 0);
-            costDiv.innerHTML = "Costo: <b>-" + buff.cost.seg + " segmenti</b> + <b>-" + totalHpCost + (totalHpCost > buff.cost.hp ? " cuori" : " cuore") + "</b>";
+            var hpCost = buff.cost.hp;
+            costDiv.innerHTML = "Costo: <b>-" + buff.cost.seg + " segmenti</b> + <b>-" + hpCost + (hpCost > 1 ? " cuori massimi" : " cuore massimo") + "</b>";
             if (!affordable) costDiv.innerHTML += " <span style='color:#ef4444'>(non hai abbastanza)</span>";
 
             btn.appendChild(iconB); btn.appendChild(nameSpan); btn.appendChild(descSmall); btn.appendChild(costDiv);

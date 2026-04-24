@@ -19,6 +19,42 @@ document.addEventListener("keydown", function (e) {
     // Block all other input while debug is open
     if (debugIsOpen) return;
 
+    // Menu states that should intercept ALL keys before game input
+    // Codex open: ESC or C closes it, block other inputs
+    if (codexIsOpen) {
+        if (k === "escape" || k === "c") { toggleCodex(); return; }
+        return; // Blocca altri input mentre il codex è aperto
+    }
+    // Settings navigation — WASD + frecce per volumi
+    // settingsIdx: 0=SFX, 1=Musica, 2=Indietro
+    if (mState === "settings") {
+        var SETTINGS_TOTAL = 3; // 2 slider + 1 indietro
+        if (k === "w" || k === "arrowup") { e.preventDefault(); settingsIdx = Math.max(0, settingsIdx - 1); renderSettingsScreen(); }
+        if (k === "s" || k === "arrowdown") { e.preventDefault(); settingsIdx = Math.min(SETTINGS_TOTAL - 1, settingsIdx + 1); renderSettingsScreen(); }
+        if (k === "arrowleft" || k === "a") {
+            e.preventDefault();
+            if (settingsIdx === 0) { settingsState.sfxVol = Math.max(0, settingsState.sfxVol - 0.05); saveSettings(); renderSettingsScreen(); }
+            else if (settingsIdx === 1) { settingsState.musicVol = Math.max(0, settingsState.musicVol - 0.05); saveSettings(); applySettings(); renderSettingsScreen(); }
+        }
+        if (k === "arrowright" || k === "d") {
+            e.preventDefault();
+            if (settingsIdx === 0) { settingsState.sfxVol = Math.min(1, settingsState.sfxVol + 0.05); saveSettings(); renderSettingsScreen(); }
+            else if (settingsIdx === 1) { settingsState.musicVol = Math.min(1, settingsState.musicVol + 0.05); saveSettings(); applySettings(); renderSettingsScreen(); }
+        }
+        if (k === " " || k === "enter") { e.preventDefault(); if (settingsIdx === 2) exitSettings(); }
+        if (k === "escape" || k === "backspace") { e.preventDefault(); exitSettings(); }
+        return;
+    }
+    // Difficulty selection navigation — PRIORITÀ ALTA, prima del game input
+    // diffIdx: 0=Peaceful, 1=Default, 2=Hardcore, 3=Indietro
+    if (mState === "difficulty") {
+        if (k === "w" || k === "arrowup") { e.preventDefault(); diffIdx = Math.max(0, diffIdx - 1); renderDifficultyScreen(); }
+        if (k === "s" || k === "arrowdown") { e.preventDefault(); diffIdx = Math.min(DIFF_TOTAL - 1, diffIdx + 1); renderDifficultyScreen(); }
+        if (k === " " || k === "enter") { e.preventDefault(); confirmDifficulty(); }
+        if (k === "escape" || k === "backspace") { e.preventDefault(); mState = "slots"; showSlotMenu(); }
+        return;
+    }
+    // Game input — solo se non siamo in un menu
     if (running && !paused && relicDelay <= 0 && cdTimer <= 0) {
         if (k === " ") {
             e.preventDefault();
@@ -29,16 +65,6 @@ document.addEventListener("keydown", function (e) {
         }
         var map = { arrowup: [0, -1], arrowdown: [0, 1], arrowleft: [-1, 0], arrowright: [1, 0], w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0] };
         if (map[k]) { e.preventDefault(); queueInput(G, map[k][0], map[k][1], fx); }
-    }
-    // Codex open: ESC or C closes it, block other inputs
-    if (codexIsOpen) {
-        if (k === "escape" || k === "c") { toggleCodex(); return; }
-        return; // Blocca altri input mentre il codex è aperto
-    }
-    // Settings: ESC/Space/Enter/Backspace goes back
-    if (mState === "settings") {
-        if (k === " " || k === "enter" || k === "escape" || k === "backspace") { e.preventDefault(); exitSettings(); return; }
-        return;
     }
     // Secret shop navigation
     if (mState === "secretshop") {

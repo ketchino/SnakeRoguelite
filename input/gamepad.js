@@ -123,9 +123,29 @@ function simulateKey(key) {
         if (k === "escape" || k === "back" || k === "codex") { toggleCodex(); return; }
         return;
     }
-    // Settings: escape/back goes back
+    // Settings: navigate + adjust
     if (mState === "settings") {
-        if (k === "escape" || k === "back" || k === "enter") { exitSettings(); return; }
+        var SETTINGS_TOTAL = 3;
+        if (k === "arrowup") { settingsIdx = Math.max(0, settingsIdx - 1); renderSettingsScreen(); }
+        if (k === "arrowdown") { settingsIdx = Math.min(SETTINGS_TOTAL - 1, settingsIdx + 1); renderSettingsScreen(); }
+        if (k === "arrowleft") {
+            if (settingsIdx === 0) { settingsState.sfxVol = Math.max(0, settingsState.sfxVol - 0.05); saveSettings(); renderSettingsScreen(); }
+            else if (settingsIdx === 1) { settingsState.musicVol = Math.max(0, settingsState.musicVol - 0.05); saveSettings(); applySettings(); renderSettingsScreen(); }
+        }
+        if (k === "arrowright") {
+            if (settingsIdx === 0) { settingsState.sfxVol = Math.min(1, settingsState.sfxVol + 0.05); saveSettings(); renderSettingsScreen(); }
+            else if (settingsIdx === 1) { settingsState.musicVol = Math.min(1, settingsState.musicVol + 0.05); saveSettings(); applySettings(); renderSettingsScreen(); }
+        }
+        if (k === "enter") { if (settingsIdx === 2) exitSettings(); }
+        if (k === "escape" || k === "back") { exitSettings(); }
+        return;
+    }
+    // Difficulty selection
+    if (mState === "difficulty") {
+        if (k === "arrowup") { diffIdx = Math.max(0, diffIdx - 1); renderDifficultyScreen(); }
+        if (k === "arrowdown") { diffIdx = Math.min(DIFF_TOTAL - 1, diffIdx + 1); renderDifficultyScreen(); }
+        if (k === "enter") { confirmDifficulty(); }
+        if (k === "escape" || k === "back") { mState = "slots"; showSlotMenu(); }
         return;
     }
     if (running && !paused && relicDelay <= 0 && cdTimer <= 0) {

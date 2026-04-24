@@ -1,6 +1,6 @@
 /* ===== GAME LOOP PRINCIPALE ===== */
 
-function mL(G) { return (G.pane ? 4 : 2) + (G.hpMaxMod || 0); }
+function mL(G) { return Math.max(2, (G.pane ? 4 : 2) + (G.hpMaxMod || 0)); }
 
 function useFrammento(G, z, fx) {
     if (!G.frammentovuoto || G.frammentoCD > 0 || !running || paused || G.isSpawning || G.snake.length < 1) return false;
@@ -327,7 +327,7 @@ function tick(G, z, fx) {
                 if (!G.boss || G.boss.defeated) {
                     if (G.zoneFood >= z.tgt) {
                         var bd = getBossForZone(G.zoneIndex);
-                        if (bd && (!G.bossDefeated || G.bossDefeated.indexOf(bd.id) === -1)) {
+                        if (bd && (!G.bossDefeated || G.bossDefeated.indexOf(bd.id) === -1) && G.difficulty !== "peaceful") {
                             G.isSpawning = false;
                             if (fx && fx.onBossStart) fx.onBossStart(bd);
                             return;
@@ -645,7 +645,7 @@ function tick(G, z, fx) {
         G.zoneFood += G.spf;
         if (fx && fx.addF) fx.addF(foodX, foodY, "+" + xpG + " XP", "#fff");
         if (G.cheese && G.totalMeals % 10 === 0) {
-            var cheeseMaxHp = 4 + (G.hpMaxMod || 0);
+            var cheeseMaxHp = Math.max(1, 4 + (G.hpMaxMod || 0));
             if (G.hp < cheeseMaxHp) { G.hp++; if (fx && fx.addF) fx.addF(foodX, foodY, "+1 HP", "#4ade80"); }
             else if (G.snake.length > 4) { G.snake.splice(-3); if (fx && fx.addF) fx.addF(foodX, foodY, "-3 Coda", "#fbbf24"); }
         }
@@ -739,7 +739,7 @@ function tick(G, z, fx) {
         if (!G.boss || G.boss.defeated) {
             if (G.zoneFood >= z.tgt) {
                 var bd2 = getBossForZone(G.zoneIndex);
-                if (bd2 && (!G.bossDefeated || G.bossDefeated.indexOf(bd2.id) === -1)) {
+                if (bd2 && (!G.bossDefeated || G.bossDefeated.indexOf(bd2.id) === -1) && G.difficulty !== "peaceful") {
                     if (fx && fx.onBossStart) fx.onBossStart(bd2);
                     return;
                 }
@@ -835,7 +835,7 @@ function tick(G, z, fx) {
     // Cuore dell'Antico: heal every 5 apples
     if (G.cuoreAntico && ate) {
         G.cuoreAnticoMeals = (G.cuoreAnticoMeals || 0) + 1;
-        var maxHp = 4 + (G.hpMaxMod || 0);
+        var maxHp = Math.max(1, 4 + (G.hpMaxMod || 0));
         if (G.cuoreAnticoMeals >= 5 && G.hp < maxHp) {
             G.cuoreAnticoMeals = 0;
             G.hp++;

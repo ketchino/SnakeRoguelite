@@ -1,6 +1,14 @@
 /* ===== ZONE & MENU CORE ===== */
 var slotDeleteFocused = false;
 
+/* ===== DIFFICULTY DEFINITIONS ===== */
+var DIFFICULTIES = [
+    { id: "peaceful", name: "PEACEFUL", icon: "\u2728", color: "#4ade80", cssClass: "diff-peaceful", nameClass: "peaceful", desc: "Nessun boss o nemico. Esplora in tranquillita." },
+    { id: "default", name: "DEFAULT", icon: "\u2694\uFE0F", color: "var(--accent)", cssClass: "diff-default", nameClass: "default-diff", desc: "L'esperienza classica. Nemici e boss normali." },
+    { id: "hardcore", name: "HARDCORE", icon: "\uD83D\uDD25", color: "#f87171", cssClass: "diff-hardcore", nameClass: "hardcore", desc: "Piu nemici, -2 HP iniziali, velocita +20%." }
+];
+var diffIdx = 1; // Default selected difficulty index
+
 function startSlot(s) {
     var raw = localStorage.getItem("snake_slot_" + s);
     G = null;
@@ -12,8 +20,14 @@ function startSlot(s) {
     if (!G) {
         G = { snake: [{ x: 7, y: 7 }, { x: 6, y: 7 }], dir: { x: 1, y: 0 }, inputBuffer: [], foods: [], score: 0, hp: 4, level: 1, xp: 0, xpNeed: 5, xpm: 1, spd: 1, spf: 1, zoneIndex: 0, zoneFood: 0, relics: [], currentSlot: s, obstacles: [], enemies: [], traps: [], isSpawning: false, spawnLeft: 0, totalMeals: 0, stonksMeals: 0, endlessCycle: 0, runStart: Date.now() };
     }
-    var D = { zoneIndex: 0, zoneFood: 0, inputBuffer: [], isSpawning: false, kunaiImmunity: 0, spawnLeft: 0, vortex: false, totalMeals: 0, stonksMeals: 0, stonks: false, lofi: false, nokia: false, nokiaSlow: 0, portal: false, slurp: false, slurpTick: 0, sonic: false, hulk: false, lag: false, cheese: false, endlessCycle: 0, obstacles: [], enemies: [], traps: [], foods: [], relics: [], sabbia: false, tronco: false, rosario: false, moneta: false, dado: false, pane: false, bigtop: false, pirla: false, nyan: false, gommu: false, arrow: false, arrowSpd: 1, trappola: false, nostalgia: false, nabbo: false, praise: false, guscio: false, unoReverse: false, linkShield: false, linkCD: 0, eruzione: false, praiseCnt: 0, eruzioneCnt: 0, kunai: false, kunaiCDMS: 0, bigtopTicks: 0, runStart: Date.now(), deathCause: "", pendingObs: [], regenTick: 0, boss: null, bossDefeated: [], piuma: false, invincible: 0, crack: null, hpMaxMod: 0, cuoreAntico: false, cuoreAnticoMeals: 0, sguardoVuoto: false, pelleMuta: false, pelleMutaTick: 0, ricordoSbiadito: false, ricordoUsed: false, ombraLunga: false, ombraTrail: [], fameEterna: false, secretBuffs: [], _debugGod: false, _debugNoClip: false, _debugSlowMo: false, occhiolupo: false, linguarospo: false, coronatiranno: false, coronaMeals: 0, scagliadraga: false, scagliaCD: 0, frammentovuoto: false, frammentoCD: 0, pelleprimordiale: false };
+    var D = { zoneIndex: 0, zoneFood: 0, inputBuffer: [], isSpawning: false, kunaiImmunity: 0, spawnLeft: 0, vortex: false, totalMeals: 0, stonksMeals: 0, stonks: false, lofi: false, nokia: false, nokiaSlow: 0, portal: false, slurp: false, slurpTick: 0, sonic: false, hulk: false, lag: false, cheese: false, endlessCycle: 0, obstacles: [], enemies: [], traps: [], foods: [], relics: [], sabbia: false, tronco: false, rosario: false, moneta: false, dado: false, pane: false, bigtop: false, pirla: false, nyan: false, gommu: false, arrow: false, arrowSpd: 1, trappola: false, nostalgia: false, nabbo: false, praise: false, guscio: false, unoReverse: false, linkShield: false, linkCD: 0, eruzione: false, praiseCnt: 0, eruzioneCnt: 0, kunai: false, kunaiCDMS: 0, bigtopTicks: 0, runStart: Date.now(), deathCause: "", pendingObs: [], regenTick: 0, boss: null, bossDefeated: [], piuma: false, invincible: 0, crack: null, hpMaxMod: 0, cuoreAntico: false, cuoreAnticoMeals: 0, sguardoVuoto: false, pelleMuta: false, pelleMutaTick: 0, ricordoSbiadito: false, ricordoUsed: false, ombraLunga: false, ombraTrail: [], fameEterna: false, secretBuffs: [], _debugGod: false, _debugNoClip: false, _debugSlowMo: false, occhiolupo: false, linguarospo: false, coronatiranno: false, coronaMeals: 0, scagliadraga: false, scagliaCD: 0, frammentovuoto: false, frammentoCD: 0, pelleprimordiale: false, difficulty: "default" };
     for (var k in D) if (typeof G[k] === "undefined") G[k] = D[k];
+    // Apply difficulty: if starting a new game (not loading), use selected difficulty
+    if (!raw) {
+        G.difficulty = selectedDifficulty;
+    }
+    // Apply difficulty modifiers
+    applyDifficultyModifiers(G);
     // Clamp zoneIndex to valid range and validate zone-related data
     if (typeof G.zoneIndex !== "number" || isNaN(G.zoneIndex) || G.zoneIndex < 0) G.zoneIndex = 0;
     if (typeof G.zoneFood !== "number" || isNaN(G.zoneFood) || G.zoneFood < 0) G.zoneFood = 0;
@@ -36,10 +50,80 @@ function startSlot(s) {
     initAudio();
     if (codexFab) codexFab.style.display = "none";
     if (codexPanel) { codexPanel.classList.remove('open'); document.body.classList.remove('codex-open'); codexIsOpen = false; }
-    setTimeout(function() { try { sEat(); } catch(e){} }, 100); applyTheme(CZ(G)); hideOv(); running = true; paused = true; mState = "";
+    setTimeout(function() { try { sEat(); } catch(e){} }, 100); applyTheme(CZ(G)); hideOv();
+    // Nascondi menu-screen fullscreen quando si inizia a giocare
+    var ms = document.getElementById("menu-screen"); if (ms) ms.classList.remove("visible");
+    running = true; paused = true; mState = "";
     if (typeof timerOnStart === "function") timerOnStart();
     stopMusic(); startMusic();
     setTimeout(function () { initZone(); }, 40);
+}
+
+function applyDifficultyModifiers(G) {
+    if (G.difficulty === "hardcore") {
+        // Hardcore: -2 HP iniziali, velocita +20%
+        G.hpMaxMod = (G.hpMaxMod || 0) - 2;
+        // Ensure hp doesn't go below 1
+        var maxHp = Math.max(1, 4 + (G.hpMaxMod || 0));
+        if (G.hp > maxHp) G.hp = maxHp;
+        G.spd = 0.8; // 20% faster (lower interval = faster)
+    } else if (G.difficulty === "peaceful") {
+        // Peaceful: no modifications needed here, handled in initZone
+        G.spd = 1;
+    } else {
+        G.spd = 1;
+    }
+}
+
+/* ===== DIFFICULTY SELECTION SCREEN ===== */
+function showDifficultyScreen(s) {
+    pendingSlot = s;
+    mState = "difficulty";
+    diffIdx = 1; // Default selected = Default
+    _renderDiffUI();
+}
+
+function confirmDifficulty() {
+    if (diffIdx >= DIFFICULTIES.length) {
+        // Indietro selezionato
+        mState = "slots"; showSlotMenu(); return;
+    }
+    selectedDifficulty = DIFFICULTIES[diffIdx].id;
+    startSlot(pendingSlot);
+}
+
+// diffIdx: 0=Peaceful, 1=Default, 2=Hardcore, 3=Indietro
+var DIFF_TOTAL = 4; // 3 difficoltà + 1 indietro
+
+function _renderDiffUI() {
+    var MC = document.getElementById("menu-content");
+    MC.textContent = "";
+    var h1 = document.createElement("h1"); h1.textContent = "\uD83C\uDFAE SELEZIONA DIFFICOLTA"; MC.appendChild(h1);
+    var sub = document.createElement("p"); sub.className = "sub"; sub.textContent = "\uD83C\uDF3F Giardino " + pendingSlot; MC.appendChild(sub);
+
+    var diffGrid = document.createElement("div"); diffGrid.className = "diff-grid";
+
+    DIFFICULTIES.forEach(function(diff, i) {
+        var btn = document.createElement("div");
+        btn.className = "btn diff-btn " + diff.cssClass + (i === diffIdx ? " selected" : "");
+        var icon = document.createElement("span"); icon.className = "diff-icon"; icon.textContent = diff.icon;
+        var name = document.createElement("span"); name.className = "diff-name " + diff.nameClass; name.textContent = diff.name;
+        var desc = document.createElement("span"); desc.className = "diff-desc"; desc.textContent = diff.desc;
+        btn.appendChild(icon); btn.appendChild(name); btn.appendChild(desc);
+        btn.onclick = function() { diffIdx = i; selectedDifficulty = diff.id; confirmDifficulty(); };
+        diffGrid.appendChild(btn);
+    });
+
+    MC.appendChild(diffGrid);
+
+    var backBtn = document.createElement("div"); backBtn.className = "btn slot-btn" + (diffIdx === 3 ? " selected" : ""); backBtn.style.cssText = "margin-top:14px;width:200px";
+    if (diffIdx !== 3) backBtn.style.opacity = ".6";
+    backBtn.textContent = "\u2190 INDIETRO"; backBtn.onclick = function() { mState = "slots"; showSlotMenu(); };
+    MC.appendChild(backBtn);
+}
+
+function renderDifficultyScreen() {
+    _renderDiffUI();
 }
 
 function initZone() {
@@ -51,6 +135,15 @@ function initZone() {
     unsetMS(); applyTheme(z);
     // If boss is active, skip normal spawning
     if (G.boss && !G.boss.defeated) {
+        // Peaceful: boss shouldn't exist, but safety check
+        if (G.difficulty === "peaceful") {
+            G.boss = null;
+            // Advance zone instead
+            if (G.zoneIndex < ZONES.length - 1) { G.zoneIndex++; } else { G.endlessCycle++; }
+            G.zoneFood = 0;
+            initZone();
+            return;
+        }
         G.traps = []; G.pendingObs = []; G.regenTick = 0;
         var sLen = Math.max(mL(G), G.snake.length);
         var sx = Math.floor(z.c / 2), sy = Math.floor(z.r / 2);
@@ -71,8 +164,22 @@ function initZone() {
     G.obstacles = []; G.enemies = []; G.traps = [];
     G.pendingObs = []; G.regenTick = 0;
     spawnObs(G, CZ(G), z.obs, "normal"); spawnObs(G, CZ(G), z.frag, "fragile"); spawnObs(G, CZ(G), z.expl, "explosive");
-    for (var i = 0; i < z.patr; i++) spawnEn(G, CZ(G), "patrol");
-    for (var i = 0; i < z.hunt; i++) spawnEn(G, CZ(G), "hunter");
+
+    // Difficulty-based enemy spawning
+    if (G.difficulty === "peaceful") {
+        // Peaceful: no enemies spawn
+    } else if (G.difficulty === "hardcore") {
+        // Hardcore: 50% more enemies
+        var hPatr = Math.ceil(z.patr * 1.5);
+        var hHunt = Math.ceil(z.hunt * 1.5);
+        for (var i = 0; i < hPatr; i++) spawnEn(G, CZ(G), "patrol");
+        for (var i = 0; i < hHunt; i++) spawnEn(G, CZ(G), "hunter");
+    } else {
+        // Default: normal spawning
+        for (var i = 0; i < z.patr; i++) spawnEn(G, CZ(G), "patrol");
+        for (var i = 0; i < z.hunt; i++) spawnEn(G, CZ(G), "hunter");
+    }
+
     // Always respawn food fresh - saved food positions may be out of zone grid bounds
     G.foods = [];
     var f = spawnFood(G, CZ(G)); if (f) G.foods = [f];
@@ -87,6 +194,9 @@ function initZone() {
     var zi = G.zoneIndex < ZONES.length ? G.zoneIndex + 1 : "ONDA " + (G.endlessCycle + 1);
     var zNum = "\uD83D\uDDFA\uFE0F ZONA " + zi;
     var zName = G.zoneIndex < ZONES.length ? z.name : "IL VUOTO ABISSALE";
+    // Add difficulty indicator to zone banner
+    if (G.difficulty === "peaceful") zNum += " \u2728";
+    else if (G.difficulty === "hardcore") zNum += " \uD83D\uDD25";
     paused = true; clearInterval(loop);
     G.preZoneSpawn = true;
     // Cambia OST per la nuova zona
@@ -215,7 +325,7 @@ function renderRelList() {
 }
 
 function pauseGame() {
-    if (mState === "slots" || mState === "dead" || mState === "codex" || mState === "settings") return;
+    if (mState === "slots" || mState === "dead" || mState === "codex" || mState === "settings" || mState === "difficulty") return;
     if (mState === "leveling" || relicDelay > 0 || cdTimer > 0) return;
     if (!running) return;
     paused = true; clearInterval(loop); mState = "paused"; mIdx = 0;
@@ -224,7 +334,7 @@ function pauseGame() {
     if (typeof playPauseMusic === "function") playPauseMusic();
     var h2 = document.createElement("h2"); h2.style.cssText = "font-family:var(--fd);color:var(--accent);font-size:24px;letter-spacing:4px"; h2.textContent = "\u23F8\uFE0F PAUSA"; OVC.appendChild(h2);
     var resumeBtn = document.createElement("div"); resumeBtn.className = "btn slot-btn selected"; resumeBtn.style.marginTop = "12px"; resumeBtn.textContent = "\u25B6\uFE0F RIPRENDI"; resumeBtn.onclick = resumeGame; OVC.appendChild(resumeBtn);
-    var settBtn = document.createElement("div"); settBtn.className = "btn slot-btn"; settBtn.style.cssText = "margin-top:8px;opacity:.7"; settBtn.textContent = "\u2699\uFE0F IMPOSTAZIONI"; settBtn.onclick = function () { showSettings(); }; OVC.appendChild(settBtn);
+    var settBtn = document.createElement("div"); settBtn.className = "btn slot-btn"; settBtn.style.cssText = "margin-top:8px;opacity:.7"; settBtn.textContent = "\u2699\uFE0F IMPOSTAZIONI"; settBtn.onclick = function () { hideOv(); closePauseRelicPanel(); showSettings(); }; OVC.appendChild(settBtn);
     var abandonBtn = document.createElement("div"); abandonBtn.className = "btn slot-btn"; abandonBtn.style.cssText = "margin-top:8px;opacity:.5"; abandonBtn.textContent = "\uD83D\uDEAA TORNA AL MEN\u00D9"; abandonBtn.onclick = abandonRun; OVC.appendChild(abandonBtn);
     showOv();
     // Apri automaticamente il pannello reliquie a sinistra
@@ -258,7 +368,7 @@ function openPauseRelicPanel() {
     // Statistiche riepilogo
     var totalRelics = G.relics.length;
     var totalCurses = (G.secretBuffs || []).length;
-    sub.textContent = totalRelics + " reliquie" + (totalCurses > 0 ? " • " + totalCurses + " maledizioni" : "");
+    sub.textContent = totalRelics + " reliquie" + (totalCurses > 0 ? " \u2022 " + totalCurses + " maledizioni" : "");
 
     // Stat chips — somma totale effetti
     var stats = [];
@@ -379,7 +489,8 @@ function showGameOver() {
     var timeStr = mins > 0 ? mins + "m " + secs + "s" : secs + "s";
     var causeMap = { "Nemico": "\uD83D\uDC7E Nemico", "Esplosione": "\uD83D\uDCA5 Esplosione", "Autocollisione": "\uD83E\uDDF1 Autocollisione", "Fuori mappa": "\uD83D\uDD32 Fuori mappa", "Ostacolo": "\uD83E\uDDF1 Ostacolo", "Boss": "\uD83D\uDCA5 Boss", "Mela Avvelenata": "\uD83D\uDFE3 Mela Avvelenata" };
     var causeStr = causeMap[G.deathCause] || "\u2764\uFE0F " + (G.deathCause || "Sconosciuto");
-    [["\u2B50 Livello", G.level], ["\uD83D\uDDFA\uFE0F Zona", zN], ["\uD83C\uDF4E Mele", G.totalMeals], ["\uD83C\uDFC6 Punti", Math.floor(G.score)], ["\uD83D\uDEE1\uFE0F Reliquie", G.relics.length], ["\u23F1\uFE0F Tempo", timeStr], ["\u2620\uFE0F Causa", causeStr]].forEach(function (pair) {
+    var diffLabel = G.difficulty === "peaceful" ? "\u2728 Peaceful" : G.difficulty === "hardcore" ? "\uD83D\uDD25 Hardcore" : "\u2694\uFE0F Default";
+    [["\u2B50 Livello", G.level], ["\uD83D\uDDFA\uFE0F Zona", zN], ["\uD83C\uDF4E Mele", G.totalMeals], ["\uD83C\uDFC6 Punti", Math.floor(G.score)], ["\uD83D\uDEE1\uFE0F Reliquie", G.relics.length], ["\u23F1\uFE0F Tempo", timeStr], ["\u2620\uFE0F Causa", causeStr], ["\uD83C\uDFAE Difficolta", diffLabel]].forEach(function (pair) {
         var d = document.createElement("div"); d.className = "ds"; d.textContent = pair[0] + " "; var b = document.createElement("b"); b.textContent = pair[1]; d.appendChild(b); OVC.appendChild(d);
     });
     var btn = document.createElement("div"); btn.className = "btn slot-btn selected"; btn.style.cssText = "margin-top:16px"; btn.textContent = "\uD83C\uDFE0 MENU"; btn.onclick = showSlotMenu; OVC.appendChild(btn);
@@ -423,7 +534,7 @@ function renderCodexScreen() {
         ZONE_CODEX.forEach(function(z, i) {
             var isDiscovered = discovered.indexOf("zone_" + i) !== -1;
             var row = document.createElement("div"); row.className = "codex-cell";
-            row.innerHTML = "<span class='rri'>" + (isDiscovered ? z.icon : "❓") + "</span><div><span class='rrn' style='color:" + (isDiscovered ? "var(--text)" : "#444") + "'>" + (isDiscovered ? z.name : "ZONA " + (i+1)) + "</span><span class='rrd'>" + (isDiscovered ? z.desc : "Non ancora esplorata.") + "</span></div>";
+            row.innerHTML = "<span class='rri'>" + (isDiscovered ? z.icon : "\u2753") + "</span><div><span class='rrn' style='color:" + (isDiscovered ? "var(--text)" : "#444") + "'>" + (isDiscovered ? z.name : "ZONA " + (i+1)) + "</span><span class='rrd'>" + (isDiscovered ? z.desc : "Non ancora esplorata.") + "</span></div>";
             wrap.appendChild(row);
         });
 
@@ -431,7 +542,7 @@ function renderCodexScreen() {
         CODEX_DB.forEach(function(db) {
             var isDiscovered = discovered.indexOf(db.id) !== -1;
             var row = document.createElement("div"); row.className = "codex-cell";
-            row.innerHTML = "<span class='rri'>" + (isDiscovered ? db.icon : "❓") + "</span><div><span class='rrn' style='color:" + (isDiscovered ? db.color : "#444") + "'>" + (isDiscovered ? db.name : "???") + "</span><span class='rrd'>" + (isDiscovered ? db.desc : "Entità non identificata.") + "</span></div>";
+            row.innerHTML = "<span class='rri'>" + (isDiscovered ? db.icon : "\u2753") + "</span><div><span class='rrn' style='color:" + (isDiscovered ? db.color : "#444") + "'>" + (isDiscovered ? db.name : "???") + "</span><span class='rrd'>" + (isDiscovered ? db.desc : "Entita non identificata.") + "</span></div>";
             wrap.appendChild(row);
         });
         
@@ -456,20 +567,23 @@ function renderCodexScreen() {
 
 function showSlotMenu() {
     running = false; paused = false; mState = "slots"; mIdx = 0; slotDeleteFocused = false;
-    clearInterval(loop); resetTheme(); resetRB(); setMS(640, 500);
+    clearInterval(loop); resetTheme(); resetRB();
     ZONE_BAR.style.display = "none";
     closePauseRelicPanel();
-    var bb = document.getElementById("boss-bar"); if (bb) bb.style.display = "none";
+    hideOv();
     initCodexUI(); codexFab.style.display = "block";
     if (codexPanel) { codexPanel.classList.remove('open'); document.body.classList.remove('codex-open'); codexIsOpen = false; }
-    renderSlots(); showOv();
+    renderSlots();
+    // Mostra menu-screen fullscreen
+    var ms = document.getElementById("menu-screen"); if (ms) ms.classList.add("visible");
     // Suona OST del menu principale — playOst già ferma la traccia corrente internamente
     if (typeof playMenuMusic === "function") playMenuMusic();
 }
 function renderSlots() {
-    OVC.textContent = "";
-    var h1 = document.createElement("h1"); h1.style.cssText = "font-family:var(--fd);color:var(--accent);font-size:26px;letter-spacing:5px;margin-bottom:8px"; h1.textContent = "\uD83D\uDC0D SNAKE ROGUELITE"; OVC.appendChild(h1);
-    var sub = document.createElement("p"); sub.className = "sub"; sub.textContent = "\uD83C\uDFAE v7.1 \u2014 \uD83D\uDDFA\uFE0F 7 zone \u2022 \uD83D\uDEE1\uFE0F 43 reliquie \u2022 \uD83C\uDFB5 OST"; OVC.appendChild(sub);
+    var MC = document.getElementById("menu-content");
+    MC.textContent = "";
+    var h1 = document.createElement("h1"); h1.textContent = "\uD83D\uDC0D SNAKE ROGUELITE"; MC.appendChild(h1);
+    var sub = document.createElement("p"); sub.className = "sub"; sub.textContent = "\uD83C\uDFAE v7.2 \u2014 \uD83D\uDDFA\uFE0F 7 zone \u2022 \uD83D\uDEE1\uFE0F 43 reliquie \u2022 \uD83C\uDFB5 OST \u2022 3 difficolta"; MC.appendChild(sub);
     // Slots container: horizontal layout
     var slotsWrap = document.createElement("div"); slotsWrap.className = "slots-grid";
     [1, 2, 3].forEach(function (s, i) {
@@ -481,11 +595,22 @@ function renderSlots() {
         var btn = document.createElement("div"); btn.className = "btn slot-btn-h" + (i === mIdx ? " selected" : "");
         if (slotDeleteFocused && i === mIdx) btn.classList.remove("selected");
         var zName = "?"; if (d && typeof ZONES !== "undefined") zName = ZONES[Math.min(d.zoneIndex, 6)].name;
-        var info = d ? "\u2B50 Lv " + d.level + " \u2022 \uD83C\uDF4E " + d.score + " Mele \u2022 \uD83D\uDDFA\uFE0F " + zName + (d.endlessCycle > 0 ? " Onda " + (d.endlessCycle + 1) : "") + " \u2022 \uD83D\uDEE1\uFE0F " + (d.relics ? d.relics.length : 0) + " rel" : "\uD83C\uDF3F Terreno Incolto";
+        var diffTag = d && d.difficulty ? (d.difficulty === "peaceful" ? " \u2728" : d.difficulty === "hardcore" ? " \uD83D\uDD25" : "") : "";
+        var info = d ? "\u2B50 Lv " + d.level + " \u2022 \uD83C\uDF4E " + d.score + " Mele \u2022 \uD83D\uDDFA\uFE0F " + zName + (d.endlessCycle > 0 ? " Onda " + (d.endlessCycle + 1) : "") + diffTag + " \u2022 \uD83D\uDEE1\uFE0F " + (d.relics ? d.relics.length : 0) + " rel" : "\uD83C\uDF3F Terreno Incolto";
         var bold = document.createElement("b"); bold.textContent = "\uD83C\uDF3F GIARDINO " + s;
         var small = document.createElement("small"); small.textContent = info;
         btn.appendChild(bold); btn.appendChild(small);
-        btn.onclick = function () { slotDeleteFocused = false; startSlot(s); };
+        btn.onclick = function () {
+            slotDeleteFocused = false;
+            var existingData = null;
+            try { existingData = JSON.parse(localStorage.getItem("snake_slot_" + s)); } catch(e) {}
+            // If slot has a valid save, go directly into the game
+            if (existingData && typeof existingData.snake !== "undefined" && typeof existingData.hp === "number" && existingData.hp > 0) {
+                startSlot(s);
+            } else {
+                showDifficultyScreen(s);
+            }
+        };
         wrapper.appendChild(btn);
         // Slider elimina salvataggio — sotto il bottone (solo se selezionato con dati)
         if (d && i === mIdx) {
@@ -507,14 +632,14 @@ function renderSlots() {
         }
         slotsWrap.appendChild(wrapper);
     });
-    OVC.appendChild(slotsWrap);
+    MC.appendChild(slotsWrap);
     // Settings button (index 3)
     var settBtn = document.createElement("div"); settBtn.className = "btn slot-btn" + (mIdx === 3 ? " selected" : "");
     settBtn.style.cssText = "opacity:.7;margin-top:4px";
     var sBold = document.createElement("b"); sBold.textContent = "\u2699\uFE0F IMPOSTAZIONI";
     var sSmall = document.createElement("small"); sSmall.textContent = "Volume e altro";
     settBtn.appendChild(sBold); settBtn.appendChild(sSmall);
-    settBtn.onclick = function () { showSettings(); }; OVC.appendChild(settBtn);
+    settBtn.onclick = function () { showSettings(); }; MC.appendChild(settBtn);
 }
 
 // Handle confirm in slot menu (3 slots + settings = 4 items, indices 0-3)
@@ -523,7 +648,16 @@ function handleSlotConfirm() {
         localStorage.removeItem("snake_slot_" + (mIdx + 1));
         slotDeleteFocused = false;
         renderSlots();
-    } else if (mIdx < 3) { startSlot(mIdx + 1); }
+    } else if (mIdx < 3) {
+        var s = mIdx + 1;
+        var existingData = null;
+        try { existingData = JSON.parse(localStorage.getItem("snake_slot_" + s)); } catch(e) {}
+        if (existingData && typeof existingData.snake !== "undefined" && typeof existingData.hp === "number" && existingData.hp > 0) {
+            startSlot(s);
+        } else {
+            showDifficultyScreen(s);
+        }
+    }
     else if (mIdx === 3) { showSettings(); }
 }
 
@@ -536,35 +670,44 @@ function handlePauseConfirm() {
 
 function showSettings() {
     settingsPrevState = mState;
-    mState = "settings"; mIdx = 0;
-    OVC.textContent = "";
-    var h2 = document.createElement("h2"); h2.style.cssText = "font-family:var(--fd);color:var(--accent);font-size:22px;letter-spacing:4px;margin-bottom:15px"; h2.textContent = "\u2699\uFE0F IMPOSTAZIONI"; OVC.appendChild(h2);
+    mState = "settings"; settingsIdx = 0;
+    renderSettingsScreen();
+}
+
+function renderSettingsScreen() {
+    var MC = document.getElementById("menu-content");
+    MC.textContent = "";
+    // Mostra menu-screen se non visibile (es. impostazioni dalla pausa)
+    var ms = document.getElementById("menu-screen"); if (ms) ms.classList.add("visible");
+    var h2 = document.createElement("h2"); h2.textContent = "\u2699\uFE0F IMPOSTAZIONI"; MC.appendChild(h2);
 
     // SFX Volume
-    var sfxRow = document.createElement("div"); sfxRow.className = "setting-row";
+    var sfxRow = document.createElement("div"); sfxRow.className = "setting-row" + (settingsIdx === 0 ? " selected" : "");
     var sfxLabel = document.createElement("span"); sfxLabel.className = "setting-label"; sfxLabel.textContent = "\uD83D\uDD0A Effetti Sonori";
     var sfxSlider = document.createElement("input"); sfxSlider.type = "range"; sfxSlider.min = "0"; sfxSlider.max = "100"; sfxSlider.value = Math.round(settingsState.sfxVol * 100);
     sfxSlider.className = "setting-slider";
-    sfxSlider.oninput = function() { settingsState.sfxVol = parseInt(this.value) / 100; saveSettings(); };
     var sfxVal = document.createElement("span"); sfxVal.className = "setting-val"; sfxVal.textContent = Math.round(settingsState.sfxVol * 100) + "%";
     sfxSlider.oninput = function() { settingsState.sfxVol = parseInt(this.value) / 100; sfxVal.textContent = Math.round(settingsState.sfxVol * 100) + "%"; saveSettings(); };
-    sfxRow.appendChild(sfxLabel); sfxRow.appendChild(sfxSlider); sfxRow.appendChild(sfxVal); OVC.appendChild(sfxRow);
+    sfxRow.appendChild(sfxLabel); sfxRow.appendChild(sfxSlider); sfxRow.appendChild(sfxVal); MC.appendChild(sfxRow);
 
     // Music Volume
-    var musRow = document.createElement("div"); musRow.className = "setting-row";
+    var musRow = document.createElement("div"); musRow.className = "setting-row" + (settingsIdx === 1 ? " selected" : "");
     var musLabel = document.createElement("span"); musLabel.className = "setting-label"; musLabel.textContent = "\uD83C\uDFB5 Musica";
     var musSlider = document.createElement("input"); musSlider.type = "range"; musSlider.min = "0"; musSlider.max = "100"; musSlider.value = Math.round(settingsState.musicVol * 100);
     musSlider.className = "setting-slider";
     var musVal = document.createElement("span"); musVal.className = "setting-val"; musVal.textContent = Math.round(settingsState.musicVol * 100) + "%";
     musSlider.oninput = function() { settingsState.musicVol = parseInt(this.value) / 100; musVal.textContent = Math.round(settingsState.musicVol * 100) + "%"; saveSettings(); applySettings(); };
-    musRow.appendChild(musLabel); musRow.appendChild(musSlider); musRow.appendChild(musVal); OVC.appendChild(musRow);
+    musRow.appendChild(musLabel); musRow.appendChild(musSlider); musRow.appendChild(musVal); MC.appendChild(musRow);
 
     // Back button
-    var backBtn = document.createElement("div"); backBtn.className = "btn slot-btn selected"; backBtn.style.cssText = "margin-top:18px;width:200px";
-    backBtn.textContent = "\u2190 INDIETRO"; backBtn.onclick = function() { exitSettings(); }; OVC.appendChild(backBtn);
+    var backBtn = document.createElement("div"); backBtn.className = "btn slot-btn" + (settingsIdx === 2 ? " selected" : ""); backBtn.style.cssText = "margin-top:18px;width:200px";
+    if (settingsIdx !== 2) backBtn.style.opacity = ".6";
+    backBtn.textContent = "\u2190 INDIETRO"; backBtn.onclick = function() { exitSettings(); }; MC.appendChild(backBtn);
 }
 
 function exitSettings() {
-    if (settingsPrevState === "paused") { mState = "paused"; pauseGame(); }
+    // Nascondi menu-screen se si torna alla pausa (il gioco usa l'overlay)
+    if (settingsPrevState === "paused") { var ms = document.getElementById("menu-screen"); if (ms) ms.classList.remove("visible"); mState = "paused"; pauseGame(); }
+    else if (settingsPrevState === "difficulty") { mState = "difficulty"; showDifficultyScreen(pendingSlot); }
     else { mState = "slots"; showSlotMenu(); }
 }
