@@ -124,8 +124,8 @@ function takeDamage(G, z, obs, fx, cause) {
     if (G.snake.length > 0 && fx && fx.spawnDP) fx.spawnDP(G.snake[0].x, G.snake[0].y);
     // During boss fight: don't reset snake position, just lose tail segments
     if (G.boss && !G.boss.defeated) {
-        // Boss damage: lose 2 tail segments, shorter invincibility, NO respawn
-        var bossSegLoss = 2;
+        // Boss damage: lose tail segments (reduced by meleeMod), shorter invincibility, NO respawn
+        var bossSegLoss = Math.max(1, Math.round(2 / (G.meleeMod || 1)));
         while (G.snake.length > mL(G) && bossSegLoss > 0) { G.snake.pop(); bossSegLoss--; }
         G.invincible = 4; // Shorter invincibility during boss (~0.7s)
         if (fx && fx.addF) fx.addF(G.snake[0].x, G.snake[0].y, "-1 HP", "#f87171");
@@ -362,8 +362,8 @@ function tick(G, z, fx) {
                 // Check if moving towards crack
                 var crackDist = Math.abs(G.crack.x - G.snake[0].x) + Math.abs(G.crack.y - G.snake[0].y);
                 if (crackDist <= 1) {
-                    // Entering the crack! Lose 2 segments (no life lost), open shop
-                    var crackSegLoss = 2;
+                    // Entering the crack! Lose 2 segments (no life lost), open shop (Frenk: gratis)
+                    var crackSegLoss = G.crackFree ? 0 : 2;
                     while (G.snake.length > 4 && crackSegLoss > 0) { G.snake.pop(); crackSegLoss--; }
                     if (fx && fx.onCrackEnter) fx.onCrackEnter();
                     return;
@@ -373,8 +373,8 @@ function tick(G, z, fx) {
         }
     }
 
-    // Debug No Clip: skip autocollision
-    if (!G.lag && !(G.kunaiImmunity > Date.now()) && !G._debugNoClip) {
+    // Debug No Clip / Frenk ghost: skip autocollision
+    if (!G.lag && !G.ghostBody && !(G.kunaiImmunity > Date.now()) && !G._debugNoClip) {
         var autoHit = false;
         for (var ahi = 0; ahi < G.snake.length - 1; ahi++) {
             if (G.snake[ahi].x === nx && G.snake[ahi].y === ny) { autoHit = true; break; }
@@ -426,7 +426,7 @@ function tick(G, z, fx) {
 
     // Check crack interaction: walk over crack to open shop
     if (G.crack && nx === G.crack.x && ny === G.crack.y) {
-        var crackSegLoss = 2;
+        var crackSegLoss = G.crackFree ? 0 : 2;
         while (G.snake.length > 4 && crackSegLoss > 0) { G.snake.pop(); crackSegLoss--; }
         if (fx && fx.onCrackEnter) fx.onCrackEnter();
         return;
@@ -472,15 +472,15 @@ function tick(G, z, fx) {
                 }
             }
             G.enemies = G.enemies.filter(function (e) { return e !== hitEn; });
-            var segLoss3 = 2;
+            var segLoss3 = Math.max(1, Math.round(2 / (G.meleeMod || 1)));
             while (G.snake.length > mL(G) && segLoss3 > 0) { G.snake.pop(); segLoss3--; }
             if (fx && fx.spawnEP) fx.spawnEP(nx, ny, "#a855f7");
-            if (fx && fx.addF) fx.addF(nx, ny, "-2 segmenti", "#f87171");
+            if (fx && fx.addF) fx.addF(nx, ny, "-" + Math.max(1, Math.round(2 / (G.meleeMod || 1))) + " segmenti", "#f87171");
             if (fx && fx.onScreenFlash) fx.onScreenFlash(4, "rgba(248,113,113,.15)");
             if (fx && fx.sHit) fx.sHit();
             if (fx && fx.onShake) fx.onShake(4);
             if (fx && fx.onUpdateHUD) fx.onUpdateHUD();
-            if (!ate) G.snake.pop();
+            if (!ate || (G.maxSegments && G.snake.length > G.maxSegments)) G.snake.pop();
             return;
         }
     }
@@ -654,9 +654,8 @@ function tick(G, z, fx) {
             G.coronaMeals = (G.coronaMeals || 0) + 1;
             if (G.coronaMeals >= 10) {
                 G.coronaMeals = 0;
-                G.hp++;
-                G.hpMaxMod = (G.hpMaxMod || 0) + 1;
-                if (fx && fx.addF) fx.addF(foodX, foodY, "+1 MAX HP!", "#fbbf24");
+                if (!G.hpLocked) { G.hp++; G.hpMaxMod = (G.hpMaxMod || 0) + 1; }
+                if (fx && fx.addF) fx.addF(foodX, foodY, G.hpLocked ? "HP BLOCCATO" : "+1 MAX HP!", "#fbbf24");
             }
         }
         // Lingua del Rospo: stun enemies near food
@@ -785,12 +784,13 @@ function tick(G, z, fx) {
         }
     }
 
-    if (!ate) G.snake.pop();
+    if (!ate || (G.maxSegments && G.snake.length > G.maxSegments)) G.snake.pop();
     // Cap lunghezza serpente: se ha superato il massimo, taglia la coda
-    while (G.snake.length > SNAKE_MAX_LEN) G.snake.pop();
-    if (G.slurp && G.snake.length < Math.min(SNAKE_MAX_LEN, z.c * z.r * 0.7)) {
+    var effectiveMaxLen = G.maxSegments || SNAKE_MAX_LEN;
+    while (G.snake.length > effectiveMaxLen) G.snake.pop();
+    if (G.slurp && G.snake.length < Math.min(effectiveMaxLen, z.c * z.r * 0.7)) {
         G.slurpTick++;
-        if (G.slurpTick >= 15) { G.slurpTick = 0; if (G.snake.length < SNAKE_MAX_LEN) { var t = G.snake[G.snake.length - 1]; G.snake.push({ x: t.x, y: t.y }); } }
+        if (G.slurpTick >= 15) { G.slurpTick = 0; if (G.snake.length < effectiveMaxLen) { var t = G.snake[G.snake.length - 1]; G.snake.push({ x: t.x, y: t.y }); } }
     }
     if (z.rg > 0) {
         G.regenTick = (G.regenTick || 0) + 1;

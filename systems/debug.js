@@ -4,6 +4,8 @@ var debugPanel = null;
 var debugKeysDown = {};
 var debugRelicTab = "comune"; // Tab selezionato per reliquie
 var _debugPausedMusic = false; // Traccia se la musica è stata messa in pausa dal debug
+var debugScrollPos = 0; // Preserva posizione scroll
+var debugSearchQuery = ""; // Barra di ricerca
 
 function initDebugPanel() {
     if (debugPanel) return;
@@ -31,12 +33,20 @@ function toggleDebug() {
         document.body.classList.add('debug-open');
         debugPanel.classList.add('open');
         renderDebugPanel();
+        // Ripristina posizione scroll
+        var content = debugPanel.querySelector('.debug-content');
+        if (content) content.scrollTop = debugScrollPos;
     } else {
         closeDebug();
     }
 }
 
 function closeDebug() {
+    // Salva posizione scroll prima di chiudere
+    if (debugPanel) {
+        var content = debugPanel.querySelector('.debug-content');
+        if (content) debugScrollPos = content.scrollTop;
+    }
     debugIsOpen = false;
     document.body.classList.remove('debug-open');
     if (debugPanel) debugPanel.classList.remove('open');
@@ -48,7 +58,7 @@ function closeDebug() {
     }
 
     // Riprendi solo se il gioco è in uno stato giocabile
-    if (running && mState !== "paused" && mState !== "dead" && mState !== "leveling" && mState !== "slots" && mState !== "secretshop" && mState !== "settings") {
+    if (running && mState !== "paused" && mState !== "dead" && mState !== "leveling" && mState !== "slots" && mState !== "secretshop" && mState !== "settings" && mState !== "difficulty" && mState !== "character") {
         paused = false; scheduleLoop();
     }
 }
@@ -148,7 +158,13 @@ function debugAction(action) {
             G.zoneFood = 0;
             addF(G.snake[0].x, G.snake[0].y, "ZONA +", "#c084fc");
             save();
-            closeDebug();
+            // NON chiamare closeDebug() prima di initZone() perché closeDebug
+            // riprenderebbe la vecchia traccia musicale. Chiudi visivamente il debug
+            // e lascia che initZone() gestisca la musica tramite onZoneMusicChange().
+            debugIsOpen = false;
+            document.body.classList.remove('debug-open');
+            if (debugPanel) debugPanel.classList.remove('open');
+            _debugPausedMusic = false; // Non riprendere la vecchia traccia
             initZone();
             return;
         case "spawnboss":
@@ -251,10 +267,8 @@ function debugAddRelic(relicId) {
         G.relics.push(r.id);
         r.fn(G);
     } else {
-        // Già posseduta e stackabile: applica di nuovo
         r.fn(G);
     }
-    // Aggiungi alla barra reliquie
     resetRB(); renderedRC = 0;
     G.relics.forEach(function(id) {
         var rr = RELICS.find(function(p) { return p.id === id; }); if (!rr) return;
@@ -274,53 +288,81 @@ function debugAddRelic(relicId) {
 
 function debugSetRelicTab(tab) {
     debugRelicTab = tab;
+    debugSearchQuery = ""; // Reset ricerca quando si cambia tab
     renderDebugPanel();
+}
+
+function debugSetSearch(query) {
+    debugSearchQuery = query.toLowerCase().trim();
+    renderDebugPanel();
+    // Rimetti il focus e il cursore nell'input dopo il re-render
+    var input = debugPanel.querySelector('.debug-search-input');
+    if (input) { input.focus(); input.setSelectionRange(query.length, query.length); }
+}
+
+// Helper: filtra reliquie per tab e ricerca
+function _debugFilteredRelics(onlyOwned) {
+    var q = debugSearchQuery;
+    return RELICS.filter(function(r) {
+        if (r.ra !== debugRelicTab) return false;
+        if (onlyOwned && G && running && G.relics.indexOf(r.id) === -1) return false;
+        if (q) {
+            var hay = (r.name + " " + r.desc + " " + r.icon).toLowerCase();
+            if (hay.indexOf(q) === -1) return false;
+        }
+        return true;
+    });
 }
 
 function renderDebugPanel() {
     if (!debugPanel) return;
+    // Salva posizione scroll
+    var contentEl = debugPanel.querySelector('.debug-content');
+    if (contentEl) debugScrollPos = contentEl.scrollTop;
+
     var inGame = G && running;
     var header = '\
         <div class="debug-header">\
             <h2><span class="debug-close-btn" onclick="closeDebug()">&#10005;</span>\
             \uD83D\uDD27 DEBUG</h2>\
             <div class="debug-sub">Q+M PER CHIUDERE &bull; SOLO TEST</div>\
+            <div class="debug-search">\
+                <input class="debug-search-input" type="text" placeholder="Cerca azione o reliquia..." \
+                    value="' + (debugSearchQuery || '').replace(/"/g, '&quot;') + '" \
+                    oninput="debugSetSearch(this.value)" />\
+            </div>\
         </div>';
 
-    if (!inGame) {
-        // Costruisci la lista reliquie anche fuori dal gioco (per consultazione)
-        var rarityOrder = ["comune", "raro", "epico", "leggendaria", "mitico"];
-        var rarityLabels = { "comune": "\uD83D\uDFE2 COMUNE", "raro": "\uD83D\uDD35 RARO", "epico": "\uD83D\uDFE3 EPICO", "leggendaria": "\uD83D\uDFE1 LEGGENDARIA", "mitico": "\uD83D\uDD34 MITICO" };
-        var relicListHtml = '';
-        if (debugRelicTab) {
-            var filtered = RELICS.filter(function(r) { return r.ra === debugRelicTab; });
-            filtered.forEach(function(r) {
-                var bossTag = r.bossRelic ? ' \uD83D\uDC51' : '';
-                relicListHtml += '<div class="debug-relic-item" onclick="return false;">\
-                    <span class="dri-icon">' + r.icon + '</span>\
-                    <div class="dri-info"><span class="dri-name ' + rcClass(r.ra) + '">' + r.name + bossTag + '</span><span class="dri-desc">' + r.desc + '</span></div>\
-                </div>';
-            });
-            if (!filtered.length) relicListHtml = '<div style="padding:8px;color:#555;font-size:11px;text-align:center;">Nessuna reliquia in questa categoria</div>';
-        }
+    var rarityOrder = ["comune", "raro", "epico", "leggendaria", "mitico"];
+    var rarityLabels = { "comune": "\uD83D\uDFE2 COMUNE", "raro": "\uD83D\uDD35 RARO", "epico": "\uD83D\uDFE3 EPICO", "leggendaria": "\uD83D\uDFE1 LEGGENDARIA", "mitico": "\uD83D\uDD34 MITICO" };
 
+    // Costruisci la lista reliquie
+    var relicListHtml = '';
+    var filteredRelics = _debugFilteredRelics(false);
+    filteredRelics.forEach(function(r) {
+        var owned = inGame && G.relics.indexOf(r.id) !== -1;
+        var bossTag = r.bossRelic ? ' \uD83D\uDC51' : '';
+        var clickAction = inGame ? ' onclick="debugAddRelic(\'' + r.id + '\')"' : ' onclick="return false;"';
+        relicListHtml += '<div class="debug-relic-item' + (owned ? ' owned' : '') + '"' + clickAction + '>\
+            <span class="dri-icon">' + r.icon + '</span>\
+            <div class="dri-info"><span class="dri-name ' + rcClass(r.ra) + '">' + r.name + bossTag + (owned ? ' \u2705' : '') + '</span><span class="dri-desc">' + r.desc + '</span></div>\
+        </div>';
+    });
+    if (!filteredRelics.length) relicListHtml = '<div class="debug-empty">Nessuna reliquia trovata</div>';
+
+    if (!inGame) {
         debugPanel.innerHTML = header + '\
             <div class="debug-content">\
                 <div class="debug-section">\
                     <div class="debug-section-title">\uD83C\uDFAF FUORI PARTITA</div>\
-                    <div style="padding:6px 0;font-size:11px;color:#666;font-family:var(--fd);letter-spacing:1px;">\
-                        Inizia una partita per usare tutti i cheat\
-                    </div>\
+                    <div class="debug-hint">Inizia una partita per usare tutti i cheat</div>\
                 </div>\
                 <div class="debug-section">\
                     <div class="debug-section-title">\uD83D\uDCDA UTILITÀ</div>\
                     ' + debugActionBtn("unlockcodex", "\uD83D\uDCDA", "SBLOCCA CODEX", "Scopri tutto il codex") + '\
                 </div>\
                 <div class="debug-section">\
-                    <div class="debug-section-title">\uD83D\uDEE1\uFE0F RELIQUIE (CONSULTAZIONE)</div>\
-                    <div style="padding:4px 0;font-size:10px;color:#555;font-family:var(--fd);letter-spacing:1px;">\
-                        Lista completa delle reliquie disponibili\
-                    </div>\
+                    <div class="debug-section-title">\uD83D\uDEE1\uFE0F RELIQUIE</div>\
                     <div class="debug-relic-tabs">\
                         ' + rarityOrder.map(function(ra) {
                             return '<div class="debug-relic-tab' + (debugRelicTab === ra ? ' active' : '') + '" onclick="debugSetRelicTab(\'' + ra + '\')">' + rarityLabels[ra] + '</div>';
@@ -332,97 +374,134 @@ function renderDebugPanel() {
                 </div>\
             </div>\
             <div class="debug-footer">DEBUG MENU &bull; NON PER IL GIOCO FINALE</div>';
+        // Ripristina scroll
+        var c = debugPanel.querySelector('.debug-content');
+        if (c) c.scrollTop = debugScrollPos;
         return;
     }
 
     var maxHp = 4 + (G.hpMaxMod || 0);
     var minLen = mL(G);
-    var z = CZ(G);
 
-    // Costruisci la lista reliquie per il tab selezionato
-    var rarityOrder = ["comune", "raro", "epico", "leggendaria", "mitico"];
-    var rarityLabels = { "comune": "\uD83D\uDFE2 COMUNE", "raro": "\uD83D\uDD35 RARO", "epico": "\uD83D\uDFE3 EPICO", "leggendaria": "\uD83D\uDFE1 LEGGENDARIA", "mitico": "\uD83D\uDD34 MITICO" };
-    var relicListHtml = '';
-    if (debugRelicTab) {
-        var filtered = RELICS.filter(function(r) { return r.ra === debugRelicTab; });
-        filtered.forEach(function(r) {
-            var owned = G.relics.indexOf(r.id) !== -1;
-            var bossTag = r.bossRelic ? ' \uD83D\uDC51' : '';
-            relicListHtml += '<div class="debug-relic-item' + (owned ? ' owned' : '') + '" onclick="debugAddRelic(\'' + r.id + '\')">\
-                <span class="dri-icon">' + r.icon + '</span>\
-                <div class="dri-info"><span class="dri-name ' + rcClass(r.ra) + '">' + r.name + bossTag + (owned ? ' \u2705' : '') + '</span><span class="dri-desc">' + r.desc + '</span></div>\
-            </div>';
-        });
-        if (!filtered.length) relicListHtml = '<div style="padding:8px;color:#555;font-size:11px;text-align:center;">Nessuna reliquia in questa categoria</div>';
+    // Filtra azioni per ricerca
+    var q = debugSearchQuery;
+    function matchSearch(text) {
+        if (!q) return true;
+        return text.toLowerCase().indexOf(q) !== -1;
     }
+
+    // Build sections conditionally based on search
+    var sections = '';
+
+    // STATO GIOCO (sempre visibile se in gioco e nessuna ricerca o match)
+    sections += '<div class="debug-section">\
+        <div class="debug-section-title">\uD83C\uDFAF STATO GIOCO</div>\
+        <div class="debug-hint">Zona: ' + (G.zoneIndex + 1) + '/' + ZONES.length + ' &bull; Lv: ' + G.level + ' &bull; HP: ' + G.hp + '/' + maxHp + ' &bull; Seg: ' + G.snake.length + '/' + minLen + '</div>\
+    </div>';
+
+    // TOGGLE
+    var toggleBtns = '';
+    if (matchSearch("god mode") || matchSearch("invincibilità")) toggleBtns += debugToggleBtn("god", "\uD83D\uDEE1\uFE0F", "GOD MODE", "Invincibilità infinita", G._debugGod);
+    if (matchSearch("noclip") || matchSearch("attraversa")) toggleBtns += debugToggleBtn("noclip", "\uD83D\uDC7B", "NO CLIP", "Attraversa ostacoli e muri", G._debugNoClip);
+    if (matchSearch("slowmo") || matchSearch("velocità") || matchSearch("lento")) toggleBtns += debugToggleBtn("slowmo", "\uD83D\uDC0C", "SLOW MO", "Velocità dimezzata", G._debugSlowMo);
+    if (!q || toggleBtns) {
+        sections += '<div class="debug-section">\
+            <div class="debug-section-title">\u26A1 TOGGLE</div>\
+            ' + (toggleBtns || (debugToggleBtn("god", "\uD83D\uDEE1\uFE0F", "GOD MODE", "Invincibilità infinita", G._debugGod) + debugToggleBtn("noclip", "\uD83D\uDC7B", "NO CLIP", "Attraversa ostacoli e muri", G._debugNoClip) + debugToggleBtn("slowmo", "\uD83D\uDC0C", "SLOW MO", "Velocità dimezzata", G._debugSlowMo))) + '\
+        </div>';
+    }
+
+    // VITE & HP
+    var hpBtns = '';
+    if (matchSearch("cuore") || matchSearch("hp") || matchSearch("vita")) {
+        hpBtns += debugActionBtn("addhp", "\u2764\uFE0F", "+1 CUORE MAX", "Aumenta HP e cap massimo");
+        hpBtns += debugActionBtn("remhp", "\uD83D\uDC94", "-1 CUORE MAX", "Riduce HP e cap massimo");
+    }
+    if (!q || hpBtns) {
+        sections += '<div class="debug-section">\
+            <div class="debug-section-title">\u2764\uFE0F VITE & HP</div>\
+            ' + (hpBtns || (debugActionBtn("addhp", "\u2764\uFE0F", "+1 CUORE MAX", "Aumenta HP e cap massimo") + debugActionBtn("remhp", "\uD83D\uDC94", "-1 CUORE MAX", "Riduce HP e cap massimo"))) + '\
+        </div>';
+    }
+
+    // SEGMENTI
+    var segBtns = '';
+    if (matchSearch("segmento") || matchSearch("seg") || matchSearch("coda")) {
+        segBtns += '<div class="debug-hint">Min: ' + minLen + ' seg &bull; Attuali: ' + G.snake.length + '</div>';
+        segBtns += debugActionBtn("addseg1", "\u2795", "+1 SEG", "Aggiunge un segmento");
+        segBtns += debugActionBtn("addseg5", "\u2795", "+5 SEG", "Aggiunge cinque segmenti");
+        segBtns += debugActionBtn("addseg10", "\u2795", "+10 SEG", "Aggiunge dieci segmenti");
+        segBtns += debugActionBtn("remseg1", "\u2796", "-1 SEG", "Rimuove un segmento");
+        segBtns += debugActionBtn("remseg5", "\u2796", "-5 SEG", "Rimuove cinque segmenti");
+        segBtns += debugActionBtn("remseg10", "\u2796", "-10 SEG", "Rimuove dieci segmenti");
+    }
+    if (!q || segBtns) {
+        sections += '<div class="debug-section">\
+            <div class="debug-section-title">\uD83D\uDC0D SEGMENTI</div>\
+            ' + (segBtns || ('<div class="debug-hint">Min: ' + minLen + ' seg &bull; Attuali: ' + G.snake.length + '</div>' + debugActionBtn("addseg1", "\u2795", "+1 SEG", "Aggiunge un segmento") + debugActionBtn("addseg5", "\u2795", "+5 SEG", "Aggiunge cinque segmenti") + debugActionBtn("addseg10", "\u2795", "+10 SEG", "Aggiunge dieci segmenti") + debugActionBtn("remseg1", "\u2796", "-1 SEG", "Rimuove un segmento") + debugActionBtn("remseg5", "\u2796", "-5 SEG", "Rimuove cinque segmenti") + debugActionBtn("remseg10", "\u2796", "-10 SEG", "Rimuove dieci segmenti"))) + '\
+        </div>';
+    }
+
+    // PROGRESSIONE
+    var progBtns = '';
+    if (matchSearch("level") || matchSearch("livello") || matchSearch("xp")) progBtns += debugActionBtn("addxp", "\u2B50", "LEVEL UP", "Sale di livello subito");
+    if (matchSearch("mela") || matchSearch("punteggio")) progBtns += debugActionBtn("addmele", "\uD83C\uDF4E", "+5 MELE", "Aggiunge 5 mele/punti");
+    if (!q || progBtns) {
+        sections += '<div class="debug-section">\
+            <div class="debug-section-title">\u2B50 PROGRESSIONE</div>\
+            ' + (progBtns || (debugActionBtn("addxp", "\u2B50", "LEVEL UP", "Sale di livello subito") + debugActionBtn("addmele", "\uD83C\uDF4E", "+5 MELE", "Aggiunge 5 mele/punti"))) + '\
+        </div>';
+    }
+
+    // ZONA
+    var zonaBtns = '';
+    if (matchSearch("zona") || matchSearch("skip")) zonaBtns += debugActionBtn("nextzone", "\u27A1\uFE0F", "ZONA SUCCESSIVA", "Salta alla prossima zona");
+    if (matchSearch("boss") || matchSearch("spawn")) zonaBtns += debugActionBtn("spawnboss", "\uD83E\uDD85", "SPAWN BOSS", "Evoca il boss della zona");
+    if (matchSearch("crepa") || matchSearch("shop") || matchSearch("segreto")) zonaBtns += debugActionBtn("spawncrack", "\uD83D\uDD57\uFE0F", "SPAWN CREPA", "Genera crepa shop segreto");
+    if (matchSearch("kill") || matchSearch("boss")) zonaBtns += debugActionBtn("killboss", "\uD83D\uDC80", "KILL BOSS", "Uccidi il boss attivo");
+    if (!q || zonaBtns) {
+        sections += '<div class="debug-section">\
+            <div class="debug-section-title">\uD83D\uDDFA\uFE0F ZONA</div>\
+            ' + (zonaBtns || (debugActionBtn("nextzone", "\u27A1\uFE0F", "ZONA SUCCESSIVA", "Salta alla prossima zona") + debugActionBtn("spawnboss", "\uD83E\uDD85", "SPAWN BOSS", "Evoca il boss della zona") + debugActionBtn("spawncrack", "\uD83D\uDD57\uFE0F", "SPAWN CREPA", "Genera crepa shop segreto") + debugActionBtn("killboss", "\uD83D\uDC80", "KILL BOSS", "Uccidi il boss attivo"))) + '\
+        </div>';
+    }
+
+    // AZIONI
+    var azBtns = '';
+    if (matchSearch("nemici") || matchSearch("kill")) azBtns += debugActionBtn("killenemies", "\uD83D\uDC7E", "KILL NEMICI", "Rimuove tutti i nemici");
+    if (matchSearch("muri") || matchSearch("pulisci") || matchSearch("ostacoli")) azBtns += debugActionBtn("clearobs", "\uD83E\uDDF9", "PULISCI MURI", "Rimuove tutti gli ostacoli");
+    if (matchSearch("reliquie") || matchSearch("tutte")) azBtns += debugActionBtn("giveallrelics", "\uD83D\uDEE1\uFE0F", "TUTTE RELIQUIE", "Ottieni tutte le reliquie");
+    if (matchSearch("codex") || matchSearch("sblocca")) azBtns += debugActionBtn("unlockcodex", "\uD83D\uDCDA", "SBLOCCA CODEX", "Scopri tutto il codex");
+    if (matchSearch("suicidio") || matchSearch("mori") || matchSearch("game over")) azBtns += debugActionBtn("suicide", "\u2620\uFE0F", "SUICIDIO", "Game over immediato");
+    if (!q || azBtns) {
+        sections += '<div class="debug-section">\
+            <div class="debug-section-title">\uD83D\uDCA5 AZIONI</div>\
+            ' + (azBtns || (debugActionBtn("killenemies", "\uD83D\uDC7E", "KILL NEMICI", "Rimuove tutti i nemici") + debugActionBtn("clearobs", "\uD83E\uDDF9", "PULISCI MURI", "Rimuove tutti gli ostacoli") + debugActionBtn("giveallrelics", "\uD83D\uDEE1\uFE0F", "TUTTE RELIQUIE", "Ottieni tutte le reliquie") + debugActionBtn("unlockcodex", "\uD83D\uDCDA", "SBLOCCA CODEX", "Scopri tutto il codex") + debugActionBtn("suicide", "\u2620\uFE0F", "SUICIDIO", "Game over immediato"))) + '\
+        </div>';
+    }
+
+    // RELIQUIE
+    sections += '<div class="debug-section">\
+        <div class="debug-section-title">\uD83D\uDEE1\uFE0F SELEZIONA RELIQUIA</div>\
+        <div class="debug-relic-tabs">\
+            ' + rarityOrder.map(function(ra) {
+                return '<div class="debug-relic-tab' + (debugRelicTab === ra ? ' active' : '') + '" onclick="debugSetRelicTab(\'' + ra + '\')">' + rarityLabels[ra] + '</div>';
+            }).join('') + '\
+        </div>\
+        <div class="debug-relic-list">\
+            ' + relicListHtml + '\
+        </div>\
+    </div>';
 
     debugPanel.innerHTML = header + '\
         <div class="debug-content">\
-            <div class="debug-section">\
-                <div class="debug-section-title">\uD83C\uDFAF STATO GIOCO</div>\
-                <div style="padding:6px 0;font-size:11px;color:#666;font-family:var(--fd);letter-spacing:1px;">\
-                    Zona: ' + (G.zoneIndex + 1) + '/' + ZONES.length + ' &bull; Lv: ' + G.level + ' &bull; HP: ' + G.hp + '/' + maxHp + ' &bull; Seg: ' + G.snake.length + '/' + minLen + '\
-                </div>\
-            </div>\
-            <div class="debug-section">\
-                <div class="debug-section-title">\u26A1 TOGGLE</div>\
-                ' + debugToggleBtn("god", "\uD83D\uDEE1\uFE0F", "GOD MODE", "Invincibilità infinita", G._debugGod) + '\
-                ' + debugToggleBtn("noclip", "\uD83D\uDC7B", "NO CLIP", "Attraversa ostacoli e muri", G._debugNoClip) + '\
-                ' + debugToggleBtn("slowmo", "\uD83D\uDC0C", "SLOW MO", "Velocità dimezzata", G._debugSlowMo) + '\
-            </div>\
-            <div class="debug-section">\
-                <div class="debug-section-title">\u2764\uFE0F VITE & HP</div>\
-                ' + debugActionBtn("addhp", "\u2764\uFE0F", "+1 CUORE MAX", "Aumenta HP e cap massimo") + '\
-                ' + debugActionBtn("remhp", "\uD83D\uDC94", "-1 CUORE MAX", "Riduce HP e cap massimo") + '\
-            </div>\
-            <div class="debug-section">\
-                <div class="debug-section-title">\uD83D\uDC0D SEGMENTI</div>\
-                <div style="padding:4px 0 6px;font-size:10px;color:#555;font-family:var(--fd);letter-spacing:1px;">\
-                    Minimo attuale: ' + minLen + ' seg &bull; Attuali: ' + G.snake.length + '\
-                </div>\
-                ' + debugActionBtn("addseg1", "\u2795", "+1 SEGMENTO", "Aggiunge un segmento alla coda") + '\
-                ' + debugActionBtn("addseg5", "\u2795", "+5 SEGMENTI", "Aggiunge cinque segmenti alla coda") + '\
-                ' + debugActionBtn("addseg10", "\u2795", "+10 SEGMENTI", "Aggiunge dieci segmenti alla coda") + '\
-                ' + debugActionBtn("remseg1", "\u2796", "-1 SEGMENTO", "Rimuove un segmento dalla coda") + '\
-                ' + debugActionBtn("remseg5", "\u2796", "-5 SEGMENTI", "Rimuove cinque segmenti dalla coda") + '\
-                ' + debugActionBtn("remseg10", "\u2796", "-10 SEGMENTI", "Rimuove dieci segmenti dalla coda") + '\
-            </div>\
-            <div class="debug-section">\
-                <div class="debug-section-title">\u2B50 PROGRESSIONE</div>\
-                ' + debugActionBtn("addxp", "\u2B50", "LEVEL UP", "Sale di livello subito") + '\
-                ' + debugActionBtn("addmele", "\uD83C\uDF4E", "+5 MELE", "Aggiunge 5 mele/punti") + '\
-            </div>\
-            <div class="debug-section">\
-                <div class="debug-section-title">\uD83D\uDDFA\uFE0F ZONA</div>\
-                ' + debugActionBtn("nextzone", "\u27A1\uFE0F", "ZONA SUCCESSIVA", "Salta alla prossima zona") + '\
-                ' + debugActionBtn("spawnboss", "\uD83E\uDD85", "SPAWN BOSS", "Evoca il boss della zona") + '\
-                ' + debugActionBtn("spawncrack", "\uD83D\uDD57\uFE0F", "SPAWN CREPA", "Genera crepa shop segreto") + '\
-                ' + debugActionBtn("killboss", "\uD83D\uDC80", "KILL BOSS", "Uccidi il boss attivo") + '\
-            </div>\
-            <div class="debug-section">\
-                <div class="debug-section-title">\uD83D\uDCA5 AZIONI</div>\
-                ' + debugActionBtn("killenemies", "\uD83D\uDC7E", "KILL NEMICI", "Rimuove tutti i nemici") + '\
-                ' + debugActionBtn("clearobs", "\uD83E\uDDF9", "PULISCI MURI", "Rimuove tutti gli ostacoli") + '\
-                ' + debugActionBtn("giveallrelics", "\uD83D\uDEE1\uFE0F", "TUTTE RELIQUIE", "Ottieni tutte le reliquie") + '\
-                ' + debugActionBtn("unlockcodex", "\uD83D\uDCDA", "SBLOCCA CODEX", "Scopri tutto il codex") + '\
-                ' + debugActionBtn("suicide", "\u2620\uFE0F", "SUICIDIO", "Game over immediato") + '\
-            </div>\
-            <div class="debug-section">\
-                <div class="debug-section-title">\uD83D\uDEE1\uFE0F SELEZIONA RELIQUIA</div>\
-                <div style="padding:4px 0 6px;font-size:10px;color:#555;font-family:var(--fd);letter-spacing:1px;">\
-                    Clicca per aggiungere la reliquia scelta\
-                </div>\
-                <div class="debug-relic-tabs">\
-                    ' + rarityOrder.map(function(ra) {
-                        return '<div class="debug-relic-tab' + (debugRelicTab === ra ? ' active' : '') + '" onclick="debugSetRelicTab(\'' + ra + '\')">' + rarityLabels[ra] + '</div>';
-                    }).join('') + '\
-                </div>\
-                <div class="debug-relic-list">\
-                    ' + relicListHtml + '\
-                </div>\
-            </div>\
+            ' + sections + '\
         </div>\
         <div class="debug-footer">DEBUG MENU &bull; NON PER IL GIOCO FINALE</div>';
+
+    // Ripristina scroll
+    var c = debugPanel.querySelector('.debug-content');
+    if (c) c.scrollTop = debugScrollPos;
 }
 
 function debugToggleBtn(action, icon, name, desc, active) {

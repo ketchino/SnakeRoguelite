@@ -1,7 +1,7 @@
 /* ===== RELIQUIE ===== */
 var RELICS = [
     { id: "speed", name: "Vento", icon: "👟", desc: "Aumenta la velocità di movimento del 15%.", ra: "comune", w: 32, fn: function (g) { g.spd *= 0.85; } },
-    { id: "shield", name: "Scudo", icon: "🛡️", desc: "Il serpente cresce di un cuore.", ra: "comune", w: 32, fn: function (g) { g.hp++; g.hpMaxMod = (g.hpMaxMod || 0) + 1; } },
+    { id: "shield", name: "Scudo", icon: "🛡️", desc: "Il serpente cresce di un cuore.", ra: "comune", w: 32, fn: function (g) { if (!g.hpLocked) { g.hp++; g.hpMaxMod = (g.hpMaxMod || 0) + 1; } } },
     { id: "nokia", name: "Nokia 3310", icon: "🧱", desc: "Assorbe un impatto letale senza perdere vite, ma ti rallenta per un istante.", ra: "comune", w: 28, noStack: true, fn: function (g) { g.nokia = true; } },
     { id: "stonks", name: "STONKS", icon: "📈", desc: "Guadagni punti bonus in base alla tua lunghezza, ma diventi sempre più veloce.", ra: "comune", w: 25, fn: function (g) { g.stonks = true; } },
     { id: "lofi", name: "Lofi Girl", icon: "🍵", desc: "Accetta un lieve rallentamento per ottenere esperienza extra ogni 5 mele.", ra: "comune", w: 28, fn: function (g) { g.lofi = true; g.spd *= 1.05; } },
@@ -32,13 +32,13 @@ var RELICS = [
     { id: "reverse", name: "Uno Reverse", icon: "🔄", desc: "Se un nemico ti tocca, lo disintegri all'istante e guadagni punti extra.", ra: "epico", w: 11, noStack: true, fn: function (g) { g.unoReverse = true; } },
     { id: "link", name: "Scudo di Link", icon: "🛡️", desc: "Genera uno scudo magico che annulla il prossimo danno ricevuto.", ra: "epico", w: 12, noStack: true, fn: function (g) { g.linkShield = true; g.linkCD = 0; } },
     { id: "eruzione", name: "Eruzione", icon: "🌋", desc: "Ogni 4 mele: un'esplosione violenta rade al suolo i muri circostanti.", ra: "epico", w: 13, fn: function (g) { g.eruzione = true; } },
-    { id: "god", name: "Divinità", icon: "✨", desc: "Una benedizione suprema: ottieni 2 vite extra e doppia esperienza.", ra: "leggendaria", w: 5, noStack: true, fn: function (g) { g.hp += 2; g.hpMaxMod = (g.hpMaxMod || 0) + 2; g.xpm *= 2; } },
+    { id: "god", name: "Divinità", icon: "✨", desc: "Una benedizione suprema: ottieni 2 vite extra e doppia esperienza.", ra: "leggendaria", w: 5, noStack: true, fn: function (g) { if (!g.hpLocked) { g.hp += 2; g.hpMaxMod = (g.hpMaxMod || 0) + 2; } g.xpm *= 2; } },
     { id: "lag", name: "Lag Strategico", icon: "🌐", desc: "Sfrutta un glitch per attraversare il tuo corpo alla massima velocità.", ra: "leggendaria", w: 5, noStack: true, fn: function (g) { g.lag = true; g.spd *= 0.65; } },
     { id: "kunai", name: "Kunai", icon: "⚡", desc: "In caso di pericolo, teletrasportati istantaneamente dalla testa alla coda.", ra: "leggendaria", w: 5, noStack: true, fn: function (g) { g.kunai = true; g.kunaiCDMS = 0; } },
-    { id: "omni", name: "Omnipotenza", icon: "💎", desc: "Il potere assoluto: +3 vite, punti extra e velocità fuori controllo.", ra: "mitico", w: 2, noStack: true, fn: function (g) { g.hp += 3; g.hpMaxMod = (g.hpMaxMod || 0) + 3; g.xpm *= 2; g.spf += 2; g.spd *= 0.75; } },
+    { id: "omni", name: "Omnipotenza", icon: "💎", desc: "Il potere assoluto: +3 vite, punti extra e velocità fuori controllo.", ra: "mitico", w: 2, noStack: true, fn: function (g) { if (!g.hpLocked) { g.hp += 3; g.hpMaxMod = (g.hpMaxMod || 0) + 3; } g.xpm *= 2; g.spf += 2; g.spd *= 0.75; } },
     // BOSS RELICS (w: poolWeight - usato nella pool del level-up se il boss è stato sconfitto in una run precedente)
     { id: "piuma", name: "Piuma del Corvo", icon: "🪶", desc: "I nemici ti individuano con 1 cella di distanza in meno.", ra: "raro", w: 15, noStack: true, bossRelic: true, fn: function (g) { g.piuma = true; } },
-    { id: "occhiolupo", name: "Occhio del Lupo", icon: "👁️", desc: "Le mele avvelenate dei boss brillano di più: puoi vederle da 2 celle più lontano. +1 HP.", ra: "raro", w: 15, noStack: true, bossRelic: true, fn: function (g) { g.occhiolupo = true; g.hp++; g.hpMaxMod = (g.hpMaxMod || 0) + 1; } },
+    { id: "occhiolupo", name: "Occhio del Lupo", icon: "👁️", desc: "Le mele avvelenate dei boss brillano di più: puoi vederle da 2 celle più lontano. +1 HP.", ra: "raro", w: 15, noStack: true, bossRelic: true, fn: function (g) { g.occhiolupo = true; if (!g.hpLocked) { g.hp++; g.hpMaxMod = (g.hpMaxMod || 0) + 1; } } },
     { id: "linguarospo", name: "Lingua del Rospo", icon: "👅", desc: "Mangiare una mela vicino a un nemico lo stordisce per 3 tick extra.", ra: "epico", w: 10, noStack: true, bossRelic: true, fn: function (g) { g.linguarospo = true; } },
     { id: "coronatiranno", name: "Corona del Tiranno", icon: "👑", desc: "Ogni 10 mele: guadagni 1 punto vita extra massimo.", ra: "epico", w: 10, noStack: true, bossRelic: true, fn: function (g) { g.coronatiranno = true; g.coronaMeals = 0; } },
     { id: "scagliadraga", name: "Scaglia della Draga", icon: "🐉", desc: "Riduce il danno subito del 50% una volta ogni 30 tick.", ra: "leggendaria", w: 5, noStack: true, bossRelic: true, fn: function (g) { g.scagliadraga = true; g.scagliaCD = 0; } },

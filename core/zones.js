@@ -1,5 +1,6 @@
 /* ===== ZONE & MENU CORE ===== */
 var slotDeleteFocused = false;
+var slotDeleteConfirm = false; // Conferma eliminazione salvataggio
 
 /* ===== DIFFICULTY DEFINITIONS ===== */
 var DIFFICULTIES = [
@@ -8,6 +9,53 @@ var DIFFICULTIES = [
     { id: "hardcore", name: "HARDCORE", icon: "\uD83D\uDD25", color: "#f87171", cssClass: "diff-hardcore", nameClass: "hardcore", desc: "Piu nemici, -2 HP iniziali, velocita +20%." }
 ];
 var diffIdx = 1; // Default selected difficulty index
+
+/* ===== CHARACTER DEFINITIONS ===== */
+var CHARACTERS = [
+    {
+        id: "snek",
+        name: "SNEK",
+        icon: "\uD83D\uDC0D",
+        color: "#5eead4",
+        desc: "Un serpente classico, agile e determinato. Nessuna abilita speciale, ma tanta voglia di crescere.",
+        lore: "Il primo abitante del Giardino. Semplice, ma pieno di sorprese.",
+        stats: { hp: 4, speed: 1.0, xpMult: 1.0, scoreMult: 1.0 },
+        statLabels: { hp: "HP", speed: "Velocita", xpMult: "XP Mult", scoreMult: "Mele Mult" }
+    },
+    {
+        id: "alfonso",
+        name: "ALFONSO",
+        icon: "\uD83D\uDC0D",
+        color: "#f87171",
+        desc: "Un serpente robusto e resistente. Piu cuori e il formaggio di Skyrim fin dall'inizio.",
+        lore: "Alfonso non ha mai perso una cena. Il suo segreto? Un formaggio che cura ogni ferita.",
+        stats: { hp: 6, speed: 0.8, xpMult: 1.0, scoreMult: 1.0 },
+        statLabels: { hp: "HP", speed: "Velocita", xpMult: "XP Mult", scoreMult: "Mele Mult" }
+    },
+    {
+        id: "wrym",
+        name: "WRYM",
+        icon: "\uD83D\uDC32",
+        color: "#94a3b8",
+        desc: "Un drago-serpente antico. I suoi alleati combattono al posto suo, ma la sua crescita e bloccata.",
+        lore: "Wrym non ha bisogno di crescere. I suoi servitori obbediscono al suo occhio cremisi.",
+        stats: { hp: 3, speed: 1.1, xpMult: 1.2, scoreMult: 1.0 },
+        statLabels: { hp: "HP", speed: "Velocita", xpMult: "XP Mult", scoreMult: "Mele Mult" }
+    },
+    {
+        id: "frenk",
+        name: "FRENK",
+        icon: "\uD83D\uDC7B",
+        color: "#e2e8f0",
+        desc: "Un fantasma con un solo battito. Portal Gun, crepa gratis, attraversa il proprio corpo e colpisce forte in mischia.",
+        lore: "Frenk e gia morto una volta. Non ha piu nulla da perdere, tranne quell'ultimo battito.",
+        stats: { hp: 1, speed: 1.3, xpMult: 1.8, scoreMult: 1.5, melee: 1.5 },
+        statLabels: { hp: "HP", speed: "Velocita", xpMult: "XP Mult", scoreMult: "Mele Mult", melee: "Mischia" },
+        gif: "frenk-ghost.gif"
+    }
+];
+var charIdx = 0; // Character selection index
+var CHAR_TOTAL = 1; // Total characters + 1 (indietro)
 
 function startSlot(s) {
     var raw = localStorage.getItem("snake_slot_" + s);
@@ -20,7 +68,7 @@ function startSlot(s) {
     if (!G) {
         G = { snake: [{ x: 7, y: 7 }, { x: 6, y: 7 }], dir: { x: 1, y: 0 }, inputBuffer: [], foods: [], score: 0, hp: 4, level: 1, xp: 0, xpNeed: 5, xpm: 1, spd: 1, spf: 1, zoneIndex: 0, zoneFood: 0, relics: [], currentSlot: s, obstacles: [], enemies: [], traps: [], isSpawning: false, spawnLeft: 0, totalMeals: 0, stonksMeals: 0, endlessCycle: 0, runStart: Date.now() };
     }
-    var D = { zoneIndex: 0, zoneFood: 0, inputBuffer: [], isSpawning: false, kunaiImmunity: 0, spawnLeft: 0, vortex: false, totalMeals: 0, stonksMeals: 0, stonks: false, lofi: false, nokia: false, nokiaSlow: 0, portal: false, slurp: false, slurpTick: 0, sonic: false, hulk: false, lag: false, cheese: false, endlessCycle: 0, obstacles: [], enemies: [], traps: [], foods: [], relics: [], sabbia: false, tronco: false, rosario: false, moneta: false, dado: false, pane: false, bigtop: false, pirla: false, nyan: false, gommu: false, arrow: false, arrowSpd: 1, trappola: false, nostalgia: false, nabbo: false, praise: false, guscio: false, unoReverse: false, linkShield: false, linkCD: 0, eruzione: false, praiseCnt: 0, eruzioneCnt: 0, kunai: false, kunaiCDMS: 0, bigtopTicks: 0, runStart: Date.now(), deathCause: "", pendingObs: [], regenTick: 0, boss: null, bossDefeated: [], piuma: false, invincible: 0, crack: null, hpMaxMod: 0, cuoreAntico: false, cuoreAnticoMeals: 0, sguardoVuoto: false, pelleMuta: false, pelleMutaTick: 0, ricordoSbiadito: false, ricordoUsed: false, ombraLunga: false, ombraTrail: [], fameEterna: false, secretBuffs: [], _debugGod: false, _debugNoClip: false, _debugSlowMo: false, occhiolupo: false, linguarospo: false, coronatiranno: false, coronaMeals: 0, scagliadraga: false, scagliaCD: 0, frammentovuoto: false, frammentoCD: 0, pelleprimordiale: false, difficulty: "default" };
+    var D = { zoneIndex: 0, zoneFood: 0, inputBuffer: [], isSpawning: false, kunaiImmunity: 0, spawnLeft: 0, vortex: false, totalMeals: 0, stonksMeals: 0, stonks: false, lofi: false, nokia: false, nokiaSlow: 0, portal: false, slurp: false, slurpTick: 0, sonic: false, hulk: false, lag: false, cheese: false, endlessCycle: 0, obstacles: [], enemies: [], traps: [], foods: [], relics: [], sabbia: false, tronco: false, rosario: false, moneta: false, dado: false, pane: false, bigtop: false, pirla: false, nyan: false, gommu: false, arrow: false, arrowSpd: 1, trappola: false, nostalgia: false, nabbo: false, praise: false, guscio: false, unoReverse: false, linkShield: false, linkCD: 0, eruzione: false, praiseCnt: 0, eruzioneCnt: 0, kunai: false, kunaiCDMS: 0, bigtopTicks: 0, runStart: Date.now(), deathCause: "", pendingObs: [], regenTick: 0, boss: null, bossDefeated: [], piuma: false, invincible: 0, crack: null, hpMaxMod: 0, cuoreAntico: false, cuoreAnticoMeals: 0, sguardoVuoto: false, pelleMuta: false, pelleMutaTick: 0, ricordoSbiadito: false, ricordoUsed: false, ombraLunga: false, ombraTrail: [], fameEterna: false, secretBuffs: [], _debugGod: false, _debugNoClip: false, _debugSlowMo: false, occhiolupo: false, linguarospo: false, coronatiranno: false, coronaMeals: 0, scagliadraga: false, scagliaCD: 0, frammentovuoto: false, frammentoCD: 0, pelleprimordiale: false, difficulty: "default", charId: "snek", maxSegments: 0, hpLocked: false, crackFree: false, meleeMod: 1, ghostBody: false };
     for (var k in D) if (typeof G[k] === "undefined") G[k] = D[k];
     // Apply difficulty: if starting a new game (not loading), use selected difficulty
     if (!raw) {
@@ -28,6 +76,10 @@ function startSlot(s) {
     }
     // Apply difficulty modifiers
     applyDifficultyModifiers(G);
+    // Apply character modifiers (only on new game)
+    if (!raw) {
+        applyCharacterModifiers(G);
+    }
     // Clamp zoneIndex to valid range and validate zone-related data
     if (typeof G.zoneIndex !== "number" || isNaN(G.zoneIndex) || G.zoneIndex < 0) G.zoneIndex = 0;
     if (typeof G.zoneFood !== "number" || isNaN(G.zoneFood) || G.zoneFood < 0) G.zoneFood = 0;
@@ -75,11 +127,52 @@ function applyDifficultyModifiers(G) {
     }
 }
 
+function applyCharacterModifiers(G) {
+    var ch = CHARACTERS.find(function(c) { return c.id === selectedCharacter; });
+    if (!ch) return;
+    G.charId = ch.id;
+
+    // Velocita base dal personaggio
+    G.spd = ch.stats.speed;
+
+    // === ALFONSO: HP6 + cheese di default ===
+    if (ch.id === "alfonso") {
+        G.hpMaxMod = (G.hpMaxMod || 0) + 2; // 4 base + 2 = 6
+        G.hp = 4 + (G.hpMaxMod || 0);
+        G.cheese = true;
+        if (G.relics.indexOf("cheese") === -1) G.relics.push("cheese");
+    }
+
+    // === WRYM: max 7 segmenti + nabbo + eruzione ===
+    if (ch.id === "wrym") {
+        G.hpMaxMod = (G.hpMaxMod || 0) - 1; // 4 base - 1 = 3
+        G.hp = 4 + (G.hpMaxMod || 0);
+        G.maxSegments = 7;
+        G.nabbo = true;
+        G.eruzione = true;
+        if (G.relics.indexOf("nabbo") === -1) G.relics.push("nabbo");
+        if (G.relics.indexOf("eruzione") === -1) G.relics.push("eruzione");
+    }
+
+    // === FRENK: HP1 fisso + portal gun + crepa gratis + 1.5x melee + ghost body ===
+    if (ch.id === "frenk") {
+        G.hpMaxMod = -3; // 4 base - 3 = 1
+        G.hp = 1;
+        G.hpLocked = true;
+        G.crackFree = true;
+        G.portal = true;
+        G.meleeMod = 1.5; // Contatti coi nemici costano meno segmenti
+        G.ghostBody = true; // Passa attraverso il proprio corpo
+        if (G.relics.indexOf("portal") === -1) G.relics.push("portal");
+    }
+}
+
 /* ===== DIFFICULTY SELECTION SCREEN ===== */
 function showDifficultyScreen(s) {
     pendingSlot = s;
     mState = "difficulty";
     diffIdx = 1; // Default selected = Default
+    if (codexFab) codexFab.style.display = "block";
     _renderDiffUI();
 }
 
@@ -89,7 +182,8 @@ function confirmDifficulty() {
         mState = "slots"; showSlotMenu(); return;
     }
     selectedDifficulty = DIFFICULTIES[diffIdx].id;
-    startSlot(pendingSlot);
+    // Vai alla selezione del personaggio
+    showCharacterScreen();
 }
 
 // diffIdx: 0=Peaceful, 1=Default, 2=Hardcore, 3=Indietro
@@ -99,7 +193,7 @@ function _renderDiffUI() {
     var MC = document.getElementById("menu-content");
     MC.textContent = "";
     var h1 = document.createElement("h1"); h1.textContent = "\uD83C\uDFAE SELEZIONA DIFFICOLTA"; MC.appendChild(h1);
-    var sub = document.createElement("p"); sub.className = "sub"; sub.textContent = "\uD83C\uDF3F Giardino " + pendingSlot; MC.appendChild(sub);
+    var sub = document.createElement("p"); sub.className = "sub"; sub.textContent = "\uD83C\uDF3F GIARDINO #" + pendingSlot; MC.appendChild(sub);
 
     var diffGrid = document.createElement("div"); diffGrid.className = "diff-grid";
 
@@ -325,7 +419,7 @@ function renderRelList() {
 }
 
 function pauseGame() {
-    if (mState === "slots" || mState === "dead" || mState === "codex" || mState === "settings" || mState === "difficulty") return;
+    if (mState === "slots" || mState === "dead" || mState === "codex" || mState === "settings" || mState === "difficulty" || mState === "character") return;
     if (mState === "leveling" || relicDelay > 0 || cdTimer > 0) return;
     if (!running) return;
     paused = true; clearInterval(loop); mState = "paused"; mIdx = 0;
@@ -499,17 +593,74 @@ function showGameOver() {
 
 function useKunai() {
     if (!G.kunai || G.kunaiCDMS > 0 || !running || paused || G.isSpawning || G.snake.length < 2) return;
-    var tail = G.snake[G.snake.length - 1]; 
+    var z = CZ(G);
+    var tail = G.snake[G.snake.length - 1];
+    var destX = tail.x, destY = tail.y;
+
+    // Check if destination is safe (no obstacles, no boss cells, not on own body)
+    var blocked = G.obstacles.some(function(o) { return o.x === destX && o.y === destY; });
+    if (G.boss && !G.boss.defeated) {
+        var bc = bossCells(G.boss);
+        blocked = blocked || bc.some(function(c) { return c.x === destX && c.y === destY; });
+    }
+    // Check if tail position is on the snake's body (can happen if snake is coiled)
+    for (var sbi = 1; sbi < G.snake.length - 1; sbi++) {
+        if (G.snake[sbi].x === destX && G.snake[sbi].y === destY) { blocked = true; break; }
+    }
+    if (blocked) {
+        // Try to find a safe cell adjacent to the tail
+        var dirs = [{x:0,y:-1},{x:0,y:1},{x:-1,y:0},{x:1,y:0}];
+        var safeDir = null;
+        for (var di = 0; di < dirs.length; di++) {
+            var sx = destX + dirs[di].x, sy = destY + dirs[di].y;
+            if (sx < 0 || sx >= z.c || sy < 0 || sy >= z.r) continue;
+            var sBlocked = G.obstacles.some(function(o) { return o.x === sx && o.y === sy; });
+            if (!sBlocked) {
+                // Also check if this adjacent cell is on the snake body
+                var sOnBody = false;
+                for (var sbj = 1; sbj < G.snake.length; sbj++) {
+                    if (G.snake[sbj].x === sx && G.snake[sbj].y === sy) { sOnBody = true; break; }
+                }
+                if (!sOnBody) { safeDir = {x: sx, y: sy}; break; }
+            }
+        }
+        if (safeDir) { destX = safeDir.x; destY = safeDir.y; }
+        else { addF(G.snake[0].x, G.snake[0].y, "BLOCCATO!", "#ef4444"); return; }
+    }
+
     var tempX = G.snake[0].x, tempY = G.snake[0].y;
-    G.snake[0].x = tail.x; 
-    G.snake[0].y = tail.y;
+    G.snake[0].x = destX;
+    G.snake[0].y = destY;
     tail.x = tempX;
     tail.y = tempY;
+
+    // Kill enemies at destination (like spawn invincibility)
+    for (var ei = G.enemies.length - 1; ei >= 0; ei--) {
+        if (G.enemies[ei].x === destX && G.enemies[ei].y === destY) {
+            var killedEn = G.enemies[ei];
+            if (killedEn.isBossGuard && G.boss && !G.boss.defeated) {
+                if (!G.foods.some(function(f) { return f.x === destX && f.y === destY; })) {
+                    G.foods.push({ x: destX, y: destY, type: G.boss.collectType });
+                }
+            }
+            G.enemies.splice(ei, 1);
+            spawnEP(destX, destY, "#60a5fa");
+            G.score += 2;
+        }
+    }
+
+    // Grant brief invincibility (not just autocollision immunity)
     G.kunaiImmunity = Date.now() + 1500;
-    G.kunaiCDMS = 15000; 
-    sKunai(); 
-    spawnEP(G.snake[0].x, G.snake[0].y, CZ(G).ui); 
-    addF(G.snake[0].x, G.snake[0].y, "TELEPORT!", CZ(G).ui);
+    G.invincible = Math.max(G.invincible || 0, 3); // ~0.5s invincibility after teleport
+    G.kunaiCDMS = 15000;
+    sKunai();
+    spawnEP(G.snake[0].x, G.snake[0].y, z.ui);
+    addF(G.snake[0].x, G.snake[0].y, "TELEPORT!", z.ui);
+    if (typeof onScreenFlash === 'undefined') {
+        screenFlash = 6; flashClr = "rgba(96,165,250,.2)";
+    } else {
+        screenFlash = 6; flashClr = "rgba(96,165,250,.2)";
+    }
 }
 
 function renderCodexScreen() {
@@ -566,7 +717,7 @@ function renderCodexScreen() {
 }
 
 function showSlotMenu() {
-    running = false; paused = false; mState = "slots"; mIdx = 0; slotDeleteFocused = false;
+    running = false; paused = false; mState = "slots"; mIdx = 0; slotDeleteFocused = false; slotDeleteConfirm = false;
     clearInterval(loop); resetTheme(); resetRB();
     ZONE_BAR.style.display = "none";
     closePauseRelicPanel();
@@ -583,7 +734,6 @@ function renderSlots() {
     var MC = document.getElementById("menu-content");
     MC.textContent = "";
     var h1 = document.createElement("h1"); h1.textContent = "\uD83D\uDC0D SNAKE ROGUELITE"; MC.appendChild(h1);
-    var sub = document.createElement("p"); sub.className = "sub"; sub.textContent = "\uD83C\uDFAE v7.2 \u2014 \uD83D\uDDFA\uFE0F 7 zone \u2022 \uD83D\uDEE1\uFE0F 43 reliquie \u2022 \uD83C\uDFB5 OST \u2022 3 difficolta"; MC.appendChild(sub);
     // Slots container: horizontal layout
     var slotsWrap = document.createElement("div"); slotsWrap.className = "slots-grid";
     [1, 2, 3].forEach(function (s, i) {
@@ -597,7 +747,7 @@ function renderSlots() {
         var zName = "?"; if (d && typeof ZONES !== "undefined") zName = ZONES[Math.min(d.zoneIndex, 6)].name;
         var diffTag = d && d.difficulty ? (d.difficulty === "peaceful" ? " \u2728" : d.difficulty === "hardcore" ? " \uD83D\uDD25" : "") : "";
         var info = d ? "\u2B50 Lv " + d.level + " \u2022 \uD83C\uDF4E " + d.score + " Mele \u2022 \uD83D\uDDFA\uFE0F " + zName + (d.endlessCycle > 0 ? " Onda " + (d.endlessCycle + 1) : "") + diffTag + " \u2022 \uD83D\uDEE1\uFE0F " + (d.relics ? d.relics.length : 0) + " rel" : "\uD83C\uDF3F Terreno Incolto";
-        var bold = document.createElement("b"); bold.textContent = "\uD83C\uDF3F GIARDINO " + s;
+        var bold = document.createElement("b"); bold.textContent = "\uD83C\uDF3F GIARDINO #" + s;
         var small = document.createElement("small"); small.textContent = info;
         btn.appendChild(bold); btn.appendChild(small);
         btn.onclick = function () {
@@ -615,13 +765,20 @@ function renderSlots() {
         // Slider elimina salvataggio — sotto il bottone (solo se selezionato con dati)
         if (d && i === mIdx) {
             var delSlider = document.createElement("div");
-            delSlider.className = "slot-delete-slider" + (slotDeleteFocused ? " focused" : "");
-            delSlider.textContent = "\uD83D\uDDD1\uFE0F Elimina salvataggio";
+            var isConfirming = slotDeleteFocused && slotDeleteConfirm && i === mIdx;
+            delSlider.className = "slot-delete-slider" + (slotDeleteFocused ? " focused" : "") + (isConfirming ? " confirming" : "");
+            delSlider.textContent = isConfirming ? "\u26A0\uFE0F Sei sicuro? Premi di nuovo" : "\uD83D\uDDD1\uFE0F Elimina salvataggio";
             delSlider.onclick = function(e) {
                 e.stopPropagation();
-                localStorage.removeItem("snake_slot_" + s);
-                slotDeleteFocused = false;
-                renderSlots();
+                if (!slotDeleteConfirm) {
+                    slotDeleteConfirm = true;
+                    renderSlots();
+                } else {
+                    localStorage.removeItem("snake_slot_" + s);
+                    slotDeleteFocused = false;
+                    slotDeleteConfirm = false;
+                    renderSlots();
+                }
             };
             wrapper.appendChild(delSlider);
             requestAnimationFrame(function() {
@@ -645,9 +802,17 @@ function renderSlots() {
 // Handle confirm in slot menu (3 slots + settings = 4 items, indices 0-3)
 function handleSlotConfirm() {
     if (slotDeleteFocused && mIdx < 3) {
-        localStorage.removeItem("snake_slot_" + (mIdx + 1));
-        slotDeleteFocused = false;
-        renderSlots();
+        if (!slotDeleteConfirm) {
+            // Prima pressione: mostra conferma
+            slotDeleteConfirm = true;
+            renderSlots();
+        } else {
+            // Seconda pressione: elimina davvero
+            localStorage.removeItem("snake_slot_" + (mIdx + 1));
+            slotDeleteFocused = false;
+            slotDeleteConfirm = false;
+            renderSlots();
+        }
     } else if (mIdx < 3) {
         var s = mIdx + 1;
         var existingData = null;
@@ -668,11 +833,211 @@ function handlePauseConfirm() {
     else if (mIdx === 2) { abandonRun(); }
 }
 
+/* ===== CHARACTER SELECTION SCREEN ===== */
+function showCharacterScreen() {
+    mState = "character"; charIdx = 0;
+    if (codexFab) codexFab.style.display = "block";
+    _renderCharUI();
+}
+
+function confirmCharacter() {
+    selectedCharacter = CHARACTERS[charIdx].id;
+    startSlot(pendingSlot);
+}
+
+function _renderCharUI() {
+    var MC = document.getElementById("menu-content");
+    MC.textContent = "";
+    var h1 = document.createElement("h1"); h1.textContent = "\uD83C\uDFAE SELEZIONA PERSONAGGIO"; MC.appendChild(h1);
+    var sub = document.createElement("p"); sub.className = "sub"; sub.textContent = "\uD83C\uDF3F GIARDINO #" + pendingSlot; MC.appendChild(sub);
+
+    // Carousel wrapper con frecce laterali
+    var carouselWrap = document.createElement("div"); carouselWrap.className = "char-carousel-wrap";
+
+    // Freccia sinistra
+    var arrowL = document.createElement("div"); arrowL.className = "char-nav-arrow char-nav-left"; arrowL.textContent = "\u25C0";
+    arrowL.onclick = function() { charIdx = (charIdx - 1 + CHARACTERS.length) % CHARACTERS.length; renderCharacterScreen(); };
+    carouselWrap.appendChild(arrowL);
+
+    // Container scrollabile
+    var charContainer = document.createElement("div"); charContainer.className = "char-container";
+    charContainer.id = "char-scroll-container";
+
+    CHARACTERS.forEach(function(ch, i) {
+        var card = document.createElement("div");
+        card.className = "char-card" + (i === charIdx ? " selected" : "");
+        card.setAttribute("data-char-index", i);
+
+        // Preview: GIF per Frenk, canvas per gli altri
+        var previewWrap = document.createElement("div"); previewWrap.className = "char-preview";
+
+        if (ch.gif) {
+            // Frenk: mostra GIF animata
+            var gifImg = document.createElement("img"); gifImg.src = ch.gif;
+            gifImg.className = "char-gif";
+            gifImg.style.cssText = "width:120px;height:120px;border-radius:10px;border:1px solid var(--border);object-fit:cover;";
+            previewWrap.appendChild(gifImg);
+        } else {
+            // Canvas preview normale
+            var canvas = document.createElement("canvas"); canvas.width = 120; canvas.height = 120; canvas.className = "char-canvas";
+            previewWrap.appendChild(canvas);
+            _drawSnakePreview(canvas, ch);
+        }
+
+        var info = document.createElement("div"); info.className = "char-info";
+        var nameEl = document.createElement("div"); nameEl.className = "char-name"; nameEl.style.color = ch.color; nameEl.textContent = ch.icon + " " + ch.name;
+        info.appendChild(nameEl);
+        var descEl = document.createElement("div"); descEl.className = "char-desc"; descEl.textContent = ch.desc;
+        info.appendChild(descEl);
+        // Stats
+        var statsWrap = document.createElement("div"); statsWrap.className = "char-stats";
+        var statKeys = Object.keys(ch.stats);
+        statKeys.forEach(function(sk) {
+            var statRow = document.createElement("div"); statRow.className = "char-stat";
+            var statLabel = document.createElement("span"); statLabel.className = "char-stat-label"; statLabel.textContent = ch.statLabels[sk];
+            var statBar = document.createElement("div"); statBar.className = "char-stat-bar";
+            var statFill = document.createElement("div"); statFill.className = "char-stat-fill";
+            var norm = 0.5;
+            if (sk === "hp") norm = ch.stats[sk] / 8;
+            else if (sk === "speed") norm = ch.stats[sk] / 1.5;
+            else if (sk === "xpMult") norm = ch.stats[sk] / 2;
+            else if (sk === "scoreMult") norm = ch.stats[sk] / 2;
+            else if (sk === "melee") norm = ch.stats[sk] / 2;
+            norm = Math.min(1, Math.max(0.1, norm));
+            statFill.style.width = (norm * 100) + "%";
+            statFill.style.background = ch.color;
+            statBar.appendChild(statFill);
+            var statVal = document.createElement("span"); statVal.className = "char-stat-val";
+            if (sk === "hp") statVal.textContent = ch.stats[sk];
+            else if (sk === "speed") statVal.textContent = ch.stats[sk].toFixed(1) + "x";
+            else if (sk === "xpMult") statVal.textContent = ch.stats[sk].toFixed(1) + "x";
+            else if (sk === "scoreMult") statVal.textContent = ch.stats[sk].toFixed(1) + "x";
+            else if (sk === "melee") statVal.textContent = ch.stats[sk].toFixed(1) + "x";
+            statRow.appendChild(statLabel); statRow.appendChild(statBar); statRow.appendChild(statVal);
+            statsWrap.appendChild(statRow);
+        });
+        info.appendChild(statsWrap);
+        // Lore
+        var loreEl = document.createElement("div"); loreEl.className = "char-lore"; loreEl.textContent = ch.lore;
+        info.appendChild(loreEl);
+
+        card.appendChild(previewWrap); card.appendChild(info);
+        card.onclick = function() { charIdx = i; confirmCharacter(); };
+
+        charContainer.appendChild(card);
+    });
+
+    carouselWrap.appendChild(charContainer);
+
+    // Freccia destra
+    var arrowR = document.createElement("div"); arrowR.className = "char-nav-arrow char-nav-right"; arrowR.textContent = "\u25B6";
+    arrowR.onclick = function() { charIdx = (charIdx + 1) % CHARACTERS.length; renderCharacterScreen(); };
+    carouselWrap.appendChild(arrowR);
+
+    MC.appendChild(carouselWrap);
+
+    // ESC hint per tornare indietro
+    var escHint = document.createElement("div"); escHint.style.cssText = "margin-top:12px;text-align:center;color:#555;font-size:12px";
+    escHint.textContent = "ESC = Indietro";
+    MC.appendChild(escHint);
+
+    // Scroll la card selezionata al centro del carousel
+    requestAnimationFrame(function() {
+        var selCard = charContainer.querySelector(".char-card.selected");
+        if (selCard) {
+            selCard.scrollIntoView({ inline: "center", behavior: "smooth", block: "nearest" });
+        }
+    });
+}
+
+function renderCharacterScreen() {
+    _renderCharUI();
+}
+
+function _drawSnakePreview(canvas, ch) {
+    var ctx = canvas.getContext("2d");
+    var w = canvas.width, h = canvas.height;
+    var cs = 22; // cell size for preview
+    // Dark background
+    ctx.fillStyle = "#0a0a12";
+    ctx.fillRect(0, 0, w, h);
+    // Subtle grid
+    ctx.strokeStyle = "rgba(255,255,255,0.03)";
+    for (var gx = 0; gx < w; gx += cs) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, h); ctx.stroke(); }
+    for (var gy = 0; gy < h; gy += cs) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke(); }
+    // Draw snake body (S shape) - 5 body segments + head
+    var segments = [
+        {x: 3, y: 4}, // head
+        {x: 2, y: 4},
+        {x: 1, y: 4},
+        {x: 1, y: 3},
+        {x: 2, y: 3},
+        {x: 3, y: 3}
+    ];
+    var hcRgb = hRGB(ch.color);
+    // Body (tail to head, skip index 0 which is head)
+    for (var i = segments.length - 1; i >= 1; i--) {
+        var s = segments[i];
+        var t = i / (segments.length - 1);
+        var alpha = Math.max(0.15, 0.55 - t * 0.42);
+        ctx.fillStyle = "rgba(" + hcRgb.r + "," + hcRgb.g + "," + hcRgb.b + "," + alpha + ")";
+        ctx.beginPath(); ctx.roundRect(s.x * cs + 1, s.y * cs + 1, cs - 2, cs - 2, 4); ctx.fill();
+    }
+    // Head
+    var hd = segments[0];
+    ctx.save(); ctx.shadowColor = ch.color; ctx.shadowBlur = 10;
+    ctx.fillStyle = ch.color;
+    ctx.beginPath(); ctx.roundRect(hd.x * cs + 1, hd.y * cs + 1, cs - 2, cs - 2, 5); ctx.fill();
+    ctx.restore();
+    // Eye — character-specific
+    var cx = hd.x * cs + cs / 2 + 3.5, cy = hd.y * cs + cs / 2;
+    if (ch.id === "wrym") {
+        // WRYM: red glowing eye
+        ctx.save(); ctx.shadowColor = "#ef4444"; ctx.shadowBlur = 8;
+        ctx.fillStyle = "#ef4444"; ctx.beginPath(); ctx.arc(cx, cy, 3.5, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(cx + 0.5, cy, 1.2, 0, Math.PI * 2); ctx.fill();
+    } else if (ch.id === "alfonso") {
+        // ALFONSO: warm eye + cheese decoration
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#111"; ctx.beginPath(); ctx.arc(cx + 1.2, cy, 1.5, 0, Math.PI * 2); ctx.fill();
+        // Cheese icon near the snake
+        ctx.save(); ctx.shadowColor = "#fbbf24"; ctx.shadowBlur = 6;
+        ctx.fillStyle = "#fbbf24";
+        ctx.beginPath(); ctx.arc(4.2 * cs, 2.2 * cs, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = "#92400e"; ctx.font = "bold 8px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("🧀", 4.2 * cs, 2.2 * cs + 3);
+    } else {
+        // Default eye (SNEK, etc.)
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#111"; ctx.beginPath(); ctx.arc(cx + 1.2, cy, 1.5, 0, Math.PI * 2); ctx.fill();
+    }
+    // Decorative: small apple (not for Alfonso who has cheese)
+    if (ch.id !== "alfonso") {
+        ctx.save(); ctx.shadowColor = "#4ade80"; ctx.shadowBlur = 6;
+        ctx.fillStyle = "#4ade80";
+        ctx.beginPath(); ctx.arc(4.2 * cs, 2.2 * cs, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        ctx.strokeStyle = "#22c55e"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(4.2 * cs, 2.2 * cs - 5); ctx.lineTo(4.2 * cs + 1, 2.2 * cs - 8); ctx.stroke();
+    }
+    // WRYM: max segments indicator
+    if (ch.id === "wrym") {
+        ctx.fillStyle = "rgba(239,68,68,0.7)"; ctx.font = "bold 9px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("MAX 7", w / 2, h - 8);
+    }
+}
+
 function showSettings() {
     settingsPrevState = mState;
     mState = "settings"; settingsIdx = 0;
+    settingsTab = "audio"; // Default tab
     renderSettingsScreen();
 }
+
+var settingsTab = "audio"; // "audio", "keyboard", "controller"
+var settingsPrevState = "slots";
 
 function renderSettingsScreen() {
     var MC = document.getElementById("menu-content");
@@ -681,6 +1046,41 @@ function renderSettingsScreen() {
     var ms = document.getElementById("menu-screen"); if (ms) ms.classList.add("visible");
     var h2 = document.createElement("h2"); h2.textContent = "\u2699\uFE0F IMPOSTAZIONI"; MC.appendChild(h2);
 
+    // Tabs
+    var tabsDiv = document.createElement("div"); tabsDiv.className = "settings-tabs";
+    var tabs = [
+        { id: "audio", icon: "\uD83D\uDD0A", label: "AUDIO" },
+        { id: "keyboard", icon: "\u2328\uFE0F", label: "TASTIERA" },
+        { id: "controller", icon: "\uD83C\uDFAE", label: "CONTROLLER" }
+    ];
+    tabs.forEach(function(tab) {
+        var tabEl = document.createElement("div");
+        tabEl.className = "settings-tab" + (settingsTab === tab.id ? " active" : "");
+        tabEl.textContent = tab.icon + " " + tab.label;
+        tabEl.onclick = function() { settingsTab = tab.id; settingsIdx = 0; renderSettingsScreen(); };
+        tabsDiv.appendChild(tabEl);
+    });
+    MC.appendChild(tabsDiv);
+
+    // Content area
+    var contentDiv = document.createElement("div"); contentDiv.className = "settings-content";
+
+    if (settingsTab === "audio") {
+        renderAudioSettings(contentDiv);
+    } else if (settingsTab === "keyboard") {
+        renderKeyboardSettings(contentDiv);
+    } else if (settingsTab === "controller") {
+        renderControllerSettings(contentDiv);
+    }
+
+    MC.appendChild(contentDiv);
+
+    // Back button
+    var backBtn = document.createElement("div"); backBtn.className = "btn slot-btn"; backBtn.style.cssText = "margin-top:18px;width:200px";
+    backBtn.textContent = "\u2190 INDIETRO"; backBtn.onclick = function() { exitSettings(); }; MC.appendChild(backBtn);
+}
+
+function renderAudioSettings(container) {
     // SFX Volume
     var sfxRow = document.createElement("div"); sfxRow.className = "setting-row" + (settingsIdx === 0 ? " selected" : "");
     var sfxLabel = document.createElement("span"); sfxLabel.className = "setting-label"; sfxLabel.textContent = "\uD83D\uDD0A Effetti Sonori";
@@ -688,7 +1088,7 @@ function renderSettingsScreen() {
     sfxSlider.className = "setting-slider";
     var sfxVal = document.createElement("span"); sfxVal.className = "setting-val"; sfxVal.textContent = Math.round(settingsState.sfxVol * 100) + "%";
     sfxSlider.oninput = function() { settingsState.sfxVol = parseInt(this.value) / 100; sfxVal.textContent = Math.round(settingsState.sfxVol * 100) + "%"; saveSettings(); };
-    sfxRow.appendChild(sfxLabel); sfxRow.appendChild(sfxSlider); sfxRow.appendChild(sfxVal); MC.appendChild(sfxRow);
+    sfxRow.appendChild(sfxLabel); sfxRow.appendChild(sfxSlider); sfxRow.appendChild(sfxVal); container.appendChild(sfxRow);
 
     // Music Volume
     var musRow = document.createElement("div"); musRow.className = "setting-row" + (settingsIdx === 1 ? " selected" : "");
@@ -697,17 +1097,129 @@ function renderSettingsScreen() {
     musSlider.className = "setting-slider";
     var musVal = document.createElement("span"); musVal.className = "setting-val"; musVal.textContent = Math.round(settingsState.musicVol * 100) + "%";
     musSlider.oninput = function() { settingsState.musicVol = parseInt(this.value) / 100; musVal.textContent = Math.round(settingsState.musicVol * 100) + "%"; saveSettings(); applySettings(); };
-    musRow.appendChild(musLabel); musRow.appendChild(musSlider); musRow.appendChild(musVal); MC.appendChild(musRow);
+    musRow.appendChild(musLabel); musRow.appendChild(musSlider); musRow.appendChild(musVal); container.appendChild(musRow);
+}
 
-    // Back button
-    var backBtn = document.createElement("div"); backBtn.className = "btn slot-btn" + (settingsIdx === 2 ? " selected" : ""); backBtn.style.cssText = "margin-top:18px;width:200px";
-    if (settingsIdx !== 2) backBtn.style.opacity = ".6";
-    backBtn.textContent = "\u2190 INDIETRO"; backBtn.onclick = function() { exitSettings(); }; MC.appendChild(backBtn);
+function renderKeyboardSettings(container) {
+    var hint = document.createElement("div"); hint.className = "settings-hint";
+    hint.textContent = "Clicca un tasto per rimapparne l'azione, poi premi il nuovo tasto.";
+    container.appendChild(hint);
+
+    KEYMAP_ACTIONS.forEach(function(action, i) {
+        var row = document.createElement("div");
+        row.className = "setting-row keymap-row" + (settingsIdx === i ? " selected" : "");
+
+        var label = document.createElement("span"); label.className = "setting-label"; label.textContent = action.label;
+        var desc = document.createElement("span"); desc.className = "keymap-desc"; desc.textContent = action.desc;
+
+        var keyBtn = document.createElement("div"); keyBtn.className = "keymap-key-btn";
+        if (keymapListening && keymapListeningAction === action.id) {
+            keyBtn.textContent = "...";
+            keyBtn.classList.add("listening");
+        } else {
+            keyBtn.textContent = formatKeyName(getKeyForAction(action.id));
+        }
+        keyBtn.onclick = function(e) {
+            e.stopPropagation();
+            keymapListening = true;
+            keymapListeningAction = action.id;
+            renderSettingsScreen();
+        };
+
+        row.appendChild(label); row.appendChild(desc); row.appendChild(keyBtn);
+        container.appendChild(row);
+    });
+
+    // Reset button
+    var resetRow = document.createElement("div"); resetRow.className = "setting-row keymap-row" + (settingsIdx === KEYMAP_ACTIONS.length ? " selected" : "");
+    var resetLabel = document.createElement("span"); resetLabel.className = "setting-label"; resetLabel.textContent = "RIPRISTINA";
+    var resetDesc = document.createElement("span"); resetDesc.className = "keymap-desc"; resetDesc.textContent = "Torna ai tasti predefiniti";
+    resetRow.appendChild(resetLabel); resetRow.appendChild(resetDesc);
+    resetRow.onclick = function() { resetKeymap(); renderSettingsScreen(); };
+    resetRow.style.cursor = "pointer";
+    container.appendChild(resetRow);
+}
+
+// Controller mapping state
+var gpButtonMap = {
+    confirm: { label: "CONFERMA", desc: "Seleziona / Conferma", defaultBtn: "A / Cross (0)" },
+    cancel: { label: "ANNULLA", desc: "Indietro / Annulla", defaultBtn: "B / Circle (1)" },
+    ability: { label: "ABILITA", desc: "Usa abilita speciale", defaultBtn: "X / Square (2)" },
+    codex: { label: "CODEX", desc: "Apri codex", defaultBtn: "Y / Triangle (3)" },
+    pause: { label: "PAUSA", desc: "Pausa gioco", defaultBtn: "Start (9)" }
+};
+
+// Controller mapping save/load
+function loadGpMapping() {
+    try { return JSON.parse(localStorage.getItem("snake_gp_mapping")) || {}; } catch(e) { return {}; }
+}
+function saveGpMapping(mapping) { localStorage.setItem("snake_gp_mapping", JSON.stringify(mapping)); }
+function getGpButton(actionId) { var m = loadGpMapping(); return m[actionId] !== undefined ? m[actionId] : null; }
+function formatGpBtn(btnIdx) {
+    if (btnIdx === null || btnIdx === undefined) return "?";
+    var names = { 0: "A / Cross", 1: "B / Circle", 2: "X / Square", 3: "Y / Triangle", 4: "LB", 5: "RB", 6: "LT", 7: "RT", 8: "Back", 9: "Start", 10: "L3", 11: "R3" };
+    return (names[btnIdx] || "Btn " + btnIdx) + " (" + btnIdx + ")";
+}
+
+var gpMappingListening = false;
+var gpMappingAction = null;
+
+function renderControllerSettings(container) {
+    var hint = document.createElement("div"); hint.className = "settings-hint";
+    hint.textContent = "Clicca un'azione, poi premi il tasto sul controller per rimapparlo.";
+    container.appendChild(hint);
+
+    var actionIds = Object.keys(gpButtonMap);
+    actionIds.forEach(function(actionId, i) {
+        var action = gpButtonMap[actionId];
+        var row = document.createElement("div");
+        row.className = "setting-row keymap-row" + (settingsIdx === i ? " selected" : "");
+
+        var label = document.createElement("span"); label.className = "setting-label"; label.textContent = action.label;
+        var desc = document.createElement("span"); desc.className = "keymap-desc"; desc.textContent = action.desc;
+
+        var keyBtn = document.createElement("div"); keyBtn.className = "keymap-key-btn gp-key-btn";
+        if (gpMappingListening && gpMappingAction === actionId) {
+            keyBtn.textContent = "Premi...";
+            keyBtn.classList.add("listening");
+        } else {
+            var savedBtn = getGpButton(actionId);
+            keyBtn.textContent = savedBtn !== null ? formatGpBtn(savedBtn) : action.defaultBtn;
+        }
+        keyBtn.onclick = function(e) {
+            e.stopPropagation();
+            gpMappingListening = true;
+            gpMappingAction = actionId;
+            renderSettingsScreen();
+        };
+
+        row.appendChild(label); row.appendChild(desc); row.appendChild(keyBtn);
+        container.appendChild(row);
+    });
+
+    // Reset button
+    var resetRow = document.createElement("div"); resetRow.className = "setting-row keymap-row" + (settingsIdx === actionIds.length ? " selected" : "");
+    var resetLabel = document.createElement("span"); resetLabel.className = "setting-label"; resetLabel.textContent = "RIPRISTINA";
+    var resetDesc = document.createElement("span"); resetDesc.className = "keymap-desc"; resetDesc.textContent = "Torna alla mappatura predefinita";
+    resetRow.appendChild(resetLabel); resetRow.appendChild(resetDesc);
+    resetRow.onclick = function() { localStorage.removeItem("snake_gp_mapping"); renderSettingsScreen(); };
+    resetRow.style.cursor = "pointer";
+    container.appendChild(resetRow);
+
+    // Deadzone slider
+    var dzRow = document.createElement("div"); dzRow.className = "setting-row" + (settingsIdx === actionIds.length + 1 ? " selected" : "");
+    var dzLabel = document.createElement("span"); dzLabel.className = "setting-label"; dzLabel.textContent = "Deadzone";
+    var dzSlider = document.createElement("input"); dzSlider.type = "range"; dzSlider.min = "10"; dzSlider.max = "80"; dzSlider.value = Math.round(gpDeadzone * 100);
+    dzSlider.className = "setting-slider";
+    var dzVal = document.createElement("span"); dzVal.className = "setting-val"; dzVal.textContent = Math.round(gpDeadzone * 100) + "%";
+    dzSlider.oninput = function() { gpDeadzone = parseInt(this.value) / 100; dzVal.textContent = Math.round(gpDeadzone * 100) + "%"; localStorage.setItem("snake_gp_deadzone", gpDeadzone); };
+    dzRow.appendChild(dzLabel); dzRow.appendChild(dzSlider); dzRow.appendChild(dzVal); container.appendChild(dzRow);
 }
 
 function exitSettings() {
     // Nascondi menu-screen se si torna alla pausa (il gioco usa l'overlay)
     if (settingsPrevState === "paused") { var ms = document.getElementById("menu-screen"); if (ms) ms.classList.remove("visible"); mState = "paused"; pauseGame(); }
     else if (settingsPrevState === "difficulty") { mState = "difficulty"; showDifficultyScreen(pendingSlot); }
+    else if (settingsPrevState === "character") { mState = "character"; showCharacterScreen(); }
     else { mState = "slots"; showSlotMenu(); }
 }

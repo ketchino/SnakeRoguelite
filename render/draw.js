@@ -25,7 +25,7 @@ function draw() {
     }
     if (!running && mState === "slots") return;
     if (typeof G.zoneIndex !== "number") return;
-    var z = CZ(G), hc = hRGB(z.head);
+    var z = CZ(G), hc = hRGB((function() { var ch = CHARACTERS.find(function(c) { return c.id === (G.charId || "snek"); }); return ch ? ch.color : z.head; })());
     if (debugFrozen) { shakeX = 0; shakeY = 0; }
     else if (shakeI > 0.3) { shakeX = (Math.random() - 0.5) * shakeI; shakeY = (Math.random() - 0.5) * shakeI; shakeI *= 0.82; }
     else { shakeX = 0; shakeY = 0; shakeI = 0; }
@@ -563,12 +563,26 @@ function draw() {
         }
         if (blink) {
             var hd = G.snake[0];
-            ctx.save(); ctx.shadowColor = z.head; ctx.shadowBlur = 12;
-            ctx.fillStyle = z.head; ctx.beginPath(); ctx.roundRect(hd.x * CS + 1, hd.y * CS + 1, CS - 2, CS - 2, 5); ctx.fill();
+            var charHeadColor = hc ? ("rgb(" + hc.r + "," + hc.g + "," + hc.b + ")") : z.head;
+            ctx.save(); ctx.shadowColor = charHeadColor; ctx.shadowBlur = 12;
+            ctx.fillStyle = charHeadColor; ctx.beginPath(); ctx.roundRect(hd.x * CS + 1, hd.y * CS + 1, CS - 2, CS - 2, 5); ctx.fill();
             ctx.restore();
             var cx = hd.x * CS + 10, cy = hd.y * CS + 10, ox = G.dir.x * 3.5, oy = G.dir.y * 3.5;
-            ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(cx + ox, cy + oy, 3, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = "#111"; ctx.beginPath(); ctx.arc(cx + ox + G.dir.x * 1.2, cy + oy + G.dir.y * 1.2, 1.5, 0, Math.PI * 2); ctx.fill();
+            if (G.charId === "wrym") {
+                // WRYM: red glowing eye
+                ctx.save(); ctx.shadowColor = "#ef4444"; ctx.shadowBlur = 6;
+                ctx.fillStyle = "#ef4444"; ctx.beginPath(); ctx.arc(cx + ox, cy + oy, 3.5, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+                ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(cx + ox + G.dir.x * 0.5, cy + oy + G.dir.y * 0.5, 1.2, 0, Math.PI * 2); ctx.fill();
+            } else if (G.charId === "frenk") {
+                // FRENK: ghostly translucent eye
+                ctx.fillStyle = "rgba(226,232,240,0.6)"; ctx.beginPath(); ctx.arc(cx + ox, cy + oy, 3, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "rgba(200,220,255,0.9)"; ctx.beginPath(); ctx.arc(cx + ox + G.dir.x * 1.2, cy + oy + G.dir.y * 1.2, 1.5, 0, Math.PI * 2); ctx.fill();
+            } else {
+                // Default eye
+                ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(cx + ox, cy + oy, 3, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "#111"; ctx.beginPath(); ctx.arc(cx + ox + G.dir.x * 1.2, cy + oy + G.dir.y * 1.2, 1.5, 0, Math.PI * 2); ctx.fill();
+            }
             if (G.sonic) { ctx.strokeStyle = "rgba(96,165,250,.5)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, 12, 0, Math.PI * 2); ctx.stroke(); }
             if (G.hulk) { ctx.strokeStyle = "rgba(163,230,53,.4)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, 13, 0, Math.PI * 2); ctx.stroke(); }
             if (G.pirla) {

@@ -25,6 +25,7 @@ function initCodexUI() {
                 <h2>📚 CODEX <span class="codex-close-btn" id="codex-close-x">✕</span></h2>
                 <div class="codex-tabs">
                     <div class="codex-tab active" data-tab="zone">🗺️ ZONE</div>
+                    <div class="codex-tab" data-tab="personaggi">🐍 PERSONAGGI</div>
                     <div class="codex-tab" data-tab="nemici">👹 NEMICI</div>
                     <div class="codex-tab" data-tab="boss">🦅 BOSS</div>
                     <div class="codex-tab" data-tab="reliquie">🛡️ RELIQUIE</div>
@@ -54,8 +55,8 @@ function closeCodex() {
     codexIsOpen = false;
     document.body.classList.remove('codex-open');
     if (codexPanel) codexPanel.classList.remove('open');
-    // Show FAB only in appropriate states
-    if (codexFab && (mState === "slots" || mState === "paused")) {
+    // Show FAB in appropriate states (including difficulty and character screens)
+    if (codexFab && (mState === "slots" || mState === "paused" || mState === "difficulty" || mState === "character")) {
         codexFab.style.display = "block";
     } else {
         codexFab.style.display = "none";
@@ -108,6 +109,31 @@ function renderCodexTab(tab) {
             html += buildCell(isD ? z.icon : "❓", isD ? z.name : "ZONA " + (i+1), isD ? z.desc : "Non ancora esplorata.", isD ? "var(--text)" : "#444");
         });
     }
+    else if (tab === 'personaggi') {
+        CHARACTERS.forEach(function(ch) {
+            var isD = discovered.indexOf("char_" + ch.id) !== -1;
+            var chColor = ch.color || "var(--text)";
+            var chDesc = isD ? ch.desc : "Personaggio non ancora scoperto.";
+            var chName = isD ? ch.name : "???";
+            var chIcon = isD ? ch.icon : "❓";
+            if (!isD) chColor = "#444";
+            // Auto-discover characters that exist
+            if (!isD) { discover("char_" + ch.id); isD = true; chDesc = ch.desc; chName = ch.name; chIcon = ch.icon; chColor = ch.color; }
+            html += buildCell(chIcon, chName, chDesc, chColor);
+            // Show stats if discovered
+            if (isD && ch.stats) {
+                var statText = '';
+                var statKeys = Object.keys(ch.stats);
+                statKeys.forEach(function(sk) {
+                    var label = ch.statLabels && ch.statLabels[sk] ? ch.statLabels[sk] : sk.toUpperCase();
+                    var val = ch.stats[sk];
+                    statText += label + ': ' + val + '  ';
+                });
+                if (ch.lore) statText += '| ' + ch.lore;
+                html += buildCell('', '', statText, "#666");
+            }
+        });
+    }
     else if (tab === 'nemici') {
         // Filtra solo i nemici e le meccaniche dal DB
         CODEX_DB.filter(d => d.type === 'en' || d.type === 'me').forEach(function(db) {
@@ -150,7 +176,7 @@ function renderCodexTab(tab) {
     // Aggiorna il contatore nel footer
     var counterEl = document.getElementById('codex-counter');
     if (counterEl) {
-        var totalItems = CODEX_DB.length + ZONE_CODEX.length + BOSS_CODEX.length + RELICS.length + (typeof SECRET_CODEX !== 'undefined' ? SECRET_CODEX.length + SECRET_BUFFS.length : 0);
+        var totalItems = CODEX_DB.length + ZONE_CODEX.length + BOSS_CODEX.length + RELICS.length + CHARACTERS.length + (typeof SECRET_CODEX !== 'undefined' ? SECRET_CODEX.length + SECRET_BUFFS.length : 0);
         counterEl.textContent = discovered.length + '/' + totalItems + ' scoperti';
     }
 }

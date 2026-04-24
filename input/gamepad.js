@@ -5,6 +5,14 @@ var gpPrevDpad = {};
 var gpDeadzone = 0.5;
 var gpInputCooldown = 0;
 
+// Load saved deadzone
+(function() {
+    try {
+        var savedDz = parseFloat(localStorage.getItem("snake_gp_deadzone"));
+        if (!isNaN(savedDz) && savedDz >= 0.1 && savedDz <= 0.8) gpDeadzone = savedDz;
+    } catch(e) {}
+})();
+
 function pollGamepad() {
     if (gpInputCooldown > 0) gpInputCooldown--;
     var gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -86,13 +94,41 @@ function pollGamepad() {
         gpPrevAxes[gpKey] = { x: axisX, y: axisY };
 
         // Confirm/Cancel/Codex buttons
-        // Xbox: A(0)=confirm, B(1)=cancel, Y(3)=codex
-        // PlayStation: Cross(0)=confirm, Circle(1)=cancel, Triangle(3)=codex
-        // Both: X/Square(2)=kunai ability in-game
-        var confirmBtn = gp.buttons.length > 0 && gp.buttons[0] && gp.buttons[0].pressed;
-        var cancelBtn = gp.buttons.length > 1 && gp.buttons[1] && gp.buttons[1].pressed;
-        var xBtn = gp.buttons.length > 2 && gp.buttons[2] && gp.buttons[2].pressed;
-        var yBtn = gp.buttons.length > 3 && gp.buttons[3] && gp.buttons[3].pressed;
+        // Support custom controller mapping
+        var gpMapping = loadGpMapping();
+        var confirmBtnIdx = gpMapping.confirm !== undefined ? gpMapping.confirm : 0;
+        var cancelBtnIdx = gpMapping.cancel !== undefined ? gpMapping.cancel : 1;
+        var abilityBtnIdx = gpMapping.ability !== undefined ? gpMapping.ability : 2;
+        var codexBtnIdx = gpMapping.codex !== undefined ? gpMapping.codex : 3;
+        var pauseBtnIdx = gpMapping.pause !== undefined ? gpMapping.pause : 9;
+
+        // If controller mapping is listening, capture any button press
+        if (typeof gpMappingListening !== 'undefined' && gpMappingListening && typeof gpMappingAction !== 'undefined' && gpMappingAction) {
+            for (var mbi = 0; mbi < gp.buttons.length; mbi++) {
+                if (gp.buttons[mbi] && gp.buttons[mbi].pressed) {
+                    var mbKey = "gp_" + gi + "_map_" + mbi;
+                    if (!gpPrevButtons[mbKey]) {
+                        // Salva la mappatura
+                        var mapping = loadGpMapping();
+                        mapping[gpMappingAction] = mbi;
+                        saveGpMapping(mapping);
+                        gpMappingListening = false;
+                        gpMappingAction = null;
+                        if (typeof renderSettingsScreen === "function") renderSettingsScreen();
+                    }
+                    gpPrevButtons[mbKey] = true;
+                } else {
+                    var mbKey2 = "gp_" + gi + "_map_" + mbi;
+                    gpPrevButtons[mbKey2] = false;
+                }
+            }
+            // Continue with normal D-pad navigation
+        }
+
+        var confirmBtn = gp.buttons.length > confirmBtnIdx && gp.buttons[confirmBtnIdx] && gp.buttons[confirmBtnIdx].pressed;
+        var cancelBtn = gp.buttons.length > cancelBtnIdx && gp.buttons[cancelBtnIdx] && gp.buttons[cancelBtnIdx].pressed;
+        var xBtn = gp.buttons.length > abilityBtnIdx && gp.buttons[abilityBtnIdx] && gp.buttons[abilityBtnIdx].pressed;
+        var yBtn = gp.buttons.length > codexBtnIdx && gp.buttons[codexBtnIdx] && gp.buttons[codexBtnIdx].pressed;
         var confirmKey = "gp_" + gi + "_confirm";
         var cancelKey = "gp_" + gi + "_cancel";
         var xKey = "gp_" + gi + "_xbtn";
@@ -108,8 +144,8 @@ function pollGamepad() {
         gpPrevButtons[yKey] = yBtn;
 
         // Start/Options = pause
-        var startBtn = gp.buttons.length > 9 && gp.buttons[9] && gp.buttons[9].pressed;
-        var startKey = "gp_" + gi + "_9";
+        var startBtn = gp.buttons.length > pauseBtnIdx && gp.buttons[pauseBtnIdx] && gp.buttons[pauseBtnIdx].pressed;
+        var startKey = "gp_" + gi + "_pause";
         if (startBtn && !gpPrevButtons[startKey]) simulateKey("escape");
         gpPrevButtons[startKey] = startBtn;
     }
@@ -125,18 +161,41 @@ function simulateKey(key) {
     }
     // Settings: navigate + adjust
     if (mState === "settings") {
-        var SETTINGS_TOTAL = 3;
+        // Controller mapping listening
+        if (gpMappingListening && gpMappingAction) {
+            return; // Will be handled in pollGamepad button detection
+        }
+        var SETTINGS_TOTAL = settingsTab === "audio" ? 2 : (settingsTab === "keyboard" ? KEYMAP_ACTIONS.length + 1 : Object.keys(gpButtonMap).length + 2);
         if (k === "arrowup") { settingsIdx = Math.max(0, settingsIdx - 1); renderSettingsScreen(); }
         if (k === "arrowdown") { settingsIdx = Math.min(SETTINGS_TOTAL - 1, settingsIdx + 1); renderSettingsScreen(); }
-        if (k === "arrowleft") {
-            if (settingsIdx === 0) { settingsState.sfxVol = Math.max(0, settingsState.sfxVol - 0.05); saveSettings(); renderSettingsScreen(); }
-            else if (settingsIdx === 1) { settingsState.musicVol = Math.max(0, settingsState.musicVol - 0.05); saveSettings(); applySettings(); renderSettingsScreen(); }
+        if (settingsTab === "audio") {
+            if (k === "arrowleft") {
+                if (settingsIdx === 0) { settingsState.sfxVol = Math.max(0, settingsState.sfxVol - 0.05); saveSettings(); renderSettingsScreen(); }
+                else if (settingsIdx === 1) { settingsState.musicVol = Math.max(0, settingsState.musicVol - 0.05); saveSettings(); applySettings(); renderSettingsScreen(); }
+            }
+            if (k === "arrowright") {
+                if (settingsIdx === 0) { settingsState.sfxVol = Math.min(1, settingsState.sfxVol + 0.05); saveSettings(); renderSettingsScreen(); }
+                else if (settingsIdx === 1) { settingsState.musicVol = Math.min(1, settingsState.musicVol + 0.05); saveSettings(); applySettings(); renderSettingsScreen(); }
+            }
+        } else if (settingsTab === "keyboard") {
+            if (k === "enter") {
+                if (settingsIdx < KEYMAP_ACTIONS.length) {
+                    keymapListening = true; keymapListeningAction = KEYMAP_ACTIONS[settingsIdx].id;
+                    renderSettingsScreen();
+                } else { resetKeymap(); renderSettingsScreen(); }
+            }
+        } else if (settingsTab === "controller") {
+            if (k === "enter") {
+                var gpActionIds = Object.keys(gpButtonMap);
+                if (settingsIdx < gpActionIds.length) {
+                    gpMappingListening = true; gpMappingAction = gpActionIds[settingsIdx];
+                    renderSettingsScreen();
+                } else if (settingsIdx === gpActionIds.length) {
+                    localStorage.removeItem("snake_gp_mapping"); renderSettingsScreen();
+                }
+            }
         }
-        if (k === "arrowright") {
-            if (settingsIdx === 0) { settingsState.sfxVol = Math.min(1, settingsState.sfxVol + 0.05); saveSettings(); renderSettingsScreen(); }
-            else if (settingsIdx === 1) { settingsState.musicVol = Math.min(1, settingsState.musicVol + 0.05); saveSettings(); applySettings(); renderSettingsScreen(); }
-        }
-        if (k === "enter") { if (settingsIdx === 2) exitSettings(); }
+        if (k === "enter" && settingsTab === "audio") { exitSettings(); }
         if (k === "escape" || k === "back") { exitSettings(); }
         return;
     }
@@ -146,6 +205,56 @@ function simulateKey(key) {
         if (k === "arrowdown") { diffIdx = Math.min(DIFF_TOTAL - 1, diffIdx + 1); renderDifficultyScreen(); }
         if (k === "enter") { confirmDifficulty(); }
         if (k === "escape" || k === "back") { mState = "slots"; showSlotMenu(); }
+        return;
+    }
+    // Character selection — orizzontale come la tastiera (A/D = left/right)
+    if (mState === "character") {
+        if (k === "arrowleft") { charIdx = (charIdx - 1 + CHARACTERS.length) % CHARACTERS.length; renderCharacterScreen(); }
+        if (k === "arrowright") { charIdx = (charIdx + 1) % CHARACTERS.length; renderCharacterScreen(); }
+        if (k === "enter") { confirmCharacter(); }
+        if (k === "escape" || k === "back") { mState = "difficulty"; showDifficultyScreen(pendingSlot); }
+        return;
+    }
+    // Secret shop navigation — PRIORITÀ ALTA, prima del game input
+    // Layout 2D: A/D = sinistra/destra tra buff, S/W = scendi/sali tra riga buff e RIFIUTA
+    if (mState === "secretshop") {
+        var onRefuse = mIdx >= shopPicks.length;
+        if (k === "arrowleft") {
+            if (onRefuse) { mIdx = Math.max(0, (typeof shopBuffCol !== "undefined" ? shopBuffCol : 0)); }
+            else { mIdx = Math.max(0, mIdx - 1); shopBuffCol = mIdx; }
+            renderSecretShop();
+        }
+        if (k === "arrowright") {
+            if (onRefuse) { mIdx = Math.min(shopPicks.length - 1, (typeof shopBuffCol !== "undefined" ? shopBuffCol : shopPicks.length - 1)); }
+            else { mIdx = Math.min(shopPicks.length - 1, mIdx + 1); shopBuffCol = mIdx; }
+            renderSecretShop();
+        }
+        if (k === "arrowdown") {
+            if (!onRefuse) { shopBuffCol = mIdx; mIdx = shopPicks.length; }
+            renderSecretShop();
+        }
+        if (k === "arrowup") {
+            if (onRefuse) { mIdx = (typeof shopBuffCol !== "undefined" ? shopBuffCol : 0); }
+            renderSecretShop();
+        }
+        if (k === "enter") {
+            if (mIdx < shopPicks.length) {
+                var buff = shopPicks[mIdx];
+                if (canAffordBuff(G, buff)) {
+                    applySecretBuff(G, buff);
+                    if (!G.secretBuffs) G.secretBuffs = [];
+                    G.secretBuffs.push(buff.id);
+                    closeSecretShop(true);
+                } else {
+                    shopSnakeShake = 8;
+                    sHit();
+                    renderSecretShop();
+                }
+            } else {
+                closeSecretShop(false);
+            }
+        }
+        if (k === "escape" || k === "back") { closeSecretShop(false); }
         return;
     }
     if (running && !paused && relicDelay <= 0 && cdTimer <= 0) {
@@ -164,6 +273,10 @@ function simulateKey(key) {
         if (mState === "slots") return;
         if (mState === "leveling") return;
         if (mState === "paused") { resumeGame(); return; }
+        if (mState === "character") { mState = "difficulty"; showDifficultyScreen(pendingSlot); return; }
+        if (mState === "difficulty") { mState = "slots"; showSlotMenu(); return; }
+        if (mState === "settings") { exitSettings(); return; }
+        if (mState === "secretshop") { closeSecretShop(false); return; }
         if (running && !paused && relicDelay <= 0 && cdTimer <= 0) { pauseGame(); return; }
     }
     // "codex" key: Y/Triangle — opens codex from slots or pause
@@ -173,18 +286,18 @@ function simulateKey(key) {
     if (mState === "slots") {
         var hasSaveData = mIdx < 3 && !!localStorage.getItem("snake_slot_" + (mIdx + 1));
         if (k === "arrowup") {
-            if (slotDeleteFocused) { slotDeleteFocused = false; }
+            if (slotDeleteFocused) { slotDeleteFocused = false; slotDeleteConfirm = false; }
             else { mIdx = Math.max(0, mIdx - 1); if (mIdx > 3) mIdx = 3; }
             renderSlots();
         }
         if (k === "arrowdown") {
-            if (slotDeleteFocused) { slotDeleteFocused = false; mIdx = 3; }
+            if (slotDeleteFocused) { slotDeleteFocused = false; slotDeleteConfirm = false; mIdx = 3; }
             else if (hasSaveData) { slotDeleteFocused = true; }
             else { mIdx = Math.min(3, mIdx + 1); }
             renderSlots();
         }
-        if (k === "arrowleft") { slotDeleteFocused = false; mIdx = Math.max(0, Math.min(2, mIdx - 1)); renderSlots(); }
-        if (k === "arrowright") { slotDeleteFocused = false; mIdx = Math.min(2, mIdx + 1); renderSlots(); }
+        if (k === "arrowleft") { slotDeleteFocused = false; slotDeleteConfirm = false; mIdx = Math.max(0, Math.min(2, mIdx - 1)); renderSlots(); }
+        if (k === "arrowright") { slotDeleteFocused = false; slotDeleteConfirm = false; mIdx = Math.min(2, mIdx + 1); renderSlots(); }
         if (k === "enter") { handleSlotConfirm(); }
     } else if (mState === "leveling") {
         if (relicInputLocked) return;
@@ -193,7 +306,7 @@ function simulateKey(key) {
         if (k === "enter") { if (picks[mIdx]) applyRelic(picks[mIdx]); }
     } else if (mState === "paused") {
         if (k === "arrowup") { mIdx = Math.max(0, mIdx - 1); OVC.querySelectorAll(".btn").forEach(function (b, i) { b.classList.toggle("selected", i === mIdx); }); }
-        if (k === "arrowdown") { mIdx = Math.min(3, mIdx + 1); OVC.querySelectorAll(".btn").forEach(function (b, i) { b.classList.toggle("selected", i === mIdx); }); }
+        if (k === "arrowdown") { mIdx = Math.min(2, mIdx + 1); OVC.querySelectorAll(".btn").forEach(function (b, i) { b.classList.toggle("selected", i === mIdx); }); }
         if (k === "enter") { handlePauseConfirm(); }
     } else if (mState === "dead" && (k === "enter" || k === "back")) {
         showSlotMenu();

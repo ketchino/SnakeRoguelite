@@ -55,12 +55,23 @@ function applySecretBuff(G, buff) {
     if (G.hp > newMaxHp) G.hp = newMaxHp;
     // Applica il buff
     buff.fn(G);
+    // Se il personaggio ha maxSegments (WRYM), i patti riducono il limite segmenti
+    if (G.maxSegments > 0) {
+        G.maxSegments = Math.max(3, G.maxSegments - 2);
+    }
+    // Rimuovi segmenti extra se il serpente supera il nuovo limite
+    if (G.maxSegments > 0 && G.snake.length > G.maxSegments) {
+        while (G.snake.length > G.maxSegments) {
+            G.snake.pop();
+        }
+    }
     // Registra nel codex
     discover("secret_" + buff.id);
 }
 
 var shopPicks = [];
 var shopSnakeShake = 0;
+var shopBuffCol = 0; // ultima colonna buff selezionata per navigazione 2D
 
 function openSecretShop() {
     mState = "secretshop"; mIdx = 0;
