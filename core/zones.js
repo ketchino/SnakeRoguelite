@@ -122,6 +122,7 @@ function startSlot(s) {
     var ms = document.getElementById("menu-screen"); if (ms) ms.classList.remove("visible");
     running = true; paused = true; mState = "";
     if (typeof timerOnStart === "function") timerOnStart();
+    if (typeof showMobileControls === "function") showMobileControls();
     stopMusic(); startMusic();
     setTimeout(function () { initZone(); }, 40);
 }
@@ -320,6 +321,7 @@ function initZone() {
 function levelUp() {
     paused = true; clearInterval(loop); mState = "leveling";
     if (codexFab) codexFab.style.display = "none";
+    if (typeof hideMobileControls === "function") hideMobileControls();
     setMS(640, 500);
     G.xp -= G.xpNeed; G.level++; G.xpNeed = Math.floor(G.xpNeed * 1.6);
     picks = [];
@@ -385,6 +387,7 @@ function applyRelic(r) {
         r.fn(G);
     }
     save(); hideOv(); unsetMS(); mState = ""; paused = true; relicDelay = 900; if (codexFab) codexFab.style.display = "block";
+    if (typeof showMobileControls === "function") showMobileControls();
 }
 
 /* ===== RARITY ORDER (rarest first) ===== */
@@ -445,6 +448,7 @@ function pauseGame() {
     setMS(C.width || 360, C.height || 400); OVC.textContent = "";
     if (codexFab) codexFab.style.display = "block";
     if (typeof playPauseMusic === "function") playPauseMusic();
+    if (typeof hideMobileControls === "function") hideMobileControls();
     var h2 = document.createElement("h2"); h2.style.cssText = "font-family:var(--fd);color:var(--accent);font-size:24px;letter-spacing:4px"; h2.textContent = "\u23F8\uFE0F PAUSA"; OVC.appendChild(h2);
     var resumeBtn = document.createElement("div"); resumeBtn.className = "btn slot-btn selected"; resumeBtn.style.marginTop = "12px"; resumeBtn.textContent = "\u25B6\uFE0F RIPRENDI"; resumeBtn.onclick = resumeGame; resumeBtn.onmouseenter = function() { mIdx = 0; var bs = OVC.querySelectorAll('.slot-btn'); bs.forEach(function(b,bi) { if(bi===0) b.classList.add('selected'); else b.classList.remove('selected'); }); }; OVC.appendChild(resumeBtn);
     var settBtn = document.createElement("div"); settBtn.className = "btn slot-btn"; settBtn.style.cssText = "margin-top:8px;opacity:.7"; settBtn.textContent = "\u2699\uFE0F IMPOSTAZIONI"; settBtn.onclick = function () { hideOv(); closePauseRelicPanel(); showSettings(); }; settBtn.onmouseenter = function() { mIdx = 1; var bs = OVC.querySelectorAll('.slot-btn'); bs.forEach(function(b,bi) { if(bi===1) b.classList.add('selected'); else b.classList.remove('selected'); }); }; OVC.appendChild(settBtn);
@@ -457,6 +461,7 @@ function resumeGame() {
     closePauseRelicPanel();
     if (codexPanel) { codexPanel.classList.remove('open'); document.body.classList.remove('codex-open'); codexIsOpen = false; }
     hideOv(); unsetMS(); mState = ""; paused = true; cdTimer = 3; clearInterval(loop);
+    if (typeof showMobileControls === "function") showMobileControls();
     // Riprendi la musica della zona dopo la pausa
     if (typeof resumeZoneMusic === "function") resumeZoneMusic();
     else if (musicGainNode) startMusic();
@@ -589,6 +594,7 @@ function closePauseRelicPanel() {
 
 function showGameOver() {
     running = false; mState = "dead"; clearInterval(loop); sDie(); stopMusic(); stopOst();
+    if (typeof hideMobileControls === "function") hideMobileControls();
     closePauseRelicPanel();
     if (codexFab) codexFab.style.display = "none";
     if (codexPanel) { codexPanel.classList.remove('open'); document.body.classList.remove('codex-open'); codexIsOpen = false; }
@@ -738,6 +744,7 @@ function renderCodexScreen() {
 function showSlotMenu() {
     running = false; paused = false; mState = "slots"; mIdx = 0; slotDeleteFocused = false; slotDeleteConfirm = false;
     clearInterval(loop); resetTheme(); resetRB();
+    if (typeof hideMobileControls === "function") hideMobileControls();
     ZONE_BAR.style.display = "none";
     closePauseRelicPanel();
     hideOv();

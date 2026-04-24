@@ -77,6 +77,8 @@ function updateHUD() {
     } else {
         if (fs) fs.style.display = "none";
     }
+    // Update mobile ability button label
+    if (typeof updateMobileAbilityLabel === "function") updateMobileAbilityLabel();
     // Boss HP bar (rimossa barra inferiore ridondante — le info sono già nella zone-bar)
     while (renderedRC < G.relics.length) {
         var id = G.relics[renderedRC];
