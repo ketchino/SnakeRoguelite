@@ -2,16 +2,16 @@
 
 // --- OST file mapping ---
 var ZONE_OST = [
-    "osts/zones/zone0.ogg", // L'Albero di Mele
-    "osts/zones/zone1.ogg", // Il Bosco Oscuro
-    "osts/zones/zone2.ogg", // La Palude
-    "osts/zones/zone3.ogg", // Il Regno d'Oro
-    "osts/zones/zone4.ogg", // Il Nido del Drago
-    "osts/zones/zone5.ogg", // Le Rovine Cosmiche
-    "osts/zones/zone6.ogg"  // Il Vuoto Abissale
+    "osts/zones/midnight_token_toss.ogg",       // L'Albero di Mele
+    "osts/zones/save_room_waltz.ogg",            // Il Bosco Oscuro
+    "osts/zones/sunken_bog_gate.ogg",            // La Palude
+    "osts/zones/march_to_the_sunken_keep.ogg",   // Il Regno d'Oro
+    "osts/zones/scales_and_brimstone.ogg",       // Il Nido del Drago
+    "osts/zones/gravity_failure_imminent.ogg",   // Le Rovine Cosmiche
+    "osts/zones/between_the_stars.ogg"           // Il Vuoto Abissale
 ];
-var MENU_OST = "osts/zones/menu.ogg";
-var PAUSE_OST = "osts/zones/pause.ogg";
+var MENU_OST = "osts/zones/champions_landing.ogg";
+var PAUSE_OST = "osts/zones/when_the_world_stops.ogg";
 
 // --- OST display names ---
 var OST_NAMES = {
@@ -168,7 +168,7 @@ function beginOst(key) {
     ostRetryCount = 0;
     updateOstDisplay(key);
 
-    var targetVol = settingsState.musicVol;
+    var targetVol = (typeof MUSIC_MASTER !== "undefined" ? MUSIC_MASTER : 1) * settingsState.musicVol;
 
     // Gestione errori
     audio.onerror = function () {
@@ -277,7 +277,7 @@ function onZoneMusicChange(zoneIndex) {
 // --- Aggiorna volume in tempo reale ---
 function applyOstVolume() {
     if (currentOstAudio && !ostFadeTimer) {
-        currentOstAudio.volume = settingsState.musicVol;
+        currentOstAudio.volume = (typeof MUSIC_MASTER !== "undefined" ? MUSIC_MASTER : 1) * settingsState.musicVol;
     }
 }
 
@@ -299,7 +299,7 @@ function ostInteractionHandler() {
         currentOstAudio.play().then(function () {
             ostIsPlaying = true;
             ostUnlocked = true;
-            fadeInOst(settingsState.musicVol);
+            fadeInOst((typeof MUSIC_MASTER !== "undefined" ? MUSIC_MASTER : 1) * settingsState.musicVol);
             startLoopWatch(currentOstAudio);
         }).catch(function () {});
     }

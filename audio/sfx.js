@@ -1,8 +1,9 @@
 /* ===== EFFETTI SONORI ===== */
 var audioCtx = null;
-var settingsState = { sfxVol: 1.0, musicVol: 0.03 };
+var settingsState = { sfxVol: 1.0, musicVol: 0.4 };
+var MUSIC_MASTER = 0.08; // Volume master OST: moltiplicatore finale (8%)
 
-function loadSettings() { try { var s = JSON.parse(localStorage.getItem("snake_settings")); if (s) { settingsState.sfxVol = s.sfxVol !== undefined ? s.sfxVol : 1.0; settingsState.musicVol = s.musicVol !== undefined ? s.musicVol : 0.03; if (settingsState.musicVol >= 0.3) { settingsState.musicVol = 0.03; saveSettings(); } } } catch(e) {} }
+function loadSettings() { try { var s = JSON.parse(localStorage.getItem("snake_settings")); if (s) { settingsState.sfxVol = s.sfxVol !== undefined ? s.sfxVol : 1.0; settingsState.musicVol = s.musicVol !== undefined ? s.musicVol : 0.4; } } catch(e) {} if (settingsState.musicVol < 0.1) { settingsState.musicVol = 0.4; saveSettings(); } }
 loadSettings();
 
 function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === "suspended") audioCtx.resume(); }

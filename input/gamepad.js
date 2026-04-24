@@ -209,8 +209,8 @@ function simulateKey(key) {
     }
     // Character selection — orizzontale come la tastiera (A/D = left/right)
     if (mState === "character") {
-        if (k === "arrowleft") { charIdx = (charIdx - 1 + CHARACTERS.length) % CHARACTERS.length; renderCharacterScreen(); }
-        if (k === "arrowright") { charIdx = (charIdx + 1) % CHARACTERS.length; renderCharacterScreen(); }
+        if (k === "arrowleft") { _charNav(-1); }
+        if (k === "arrowright") { _charNav(1); }
         if (k === "enter") { confirmCharacter(); }
         if (k === "escape" || k === "back") { mState = "difficulty"; showDifficultyScreen(pendingSlot); }
         return;

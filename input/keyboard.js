@@ -99,8 +99,8 @@ document.addEventListener("keydown", function (e) {
     }
     // Character selection navigation — carousel orizzontale con wrap-around
     if (mState === "character") {
-        if (k === "a" || k === "arrowleft") { e.preventDefault(); charIdx = (charIdx - 1 + CHARACTERS.length) % CHARACTERS.length; renderCharacterScreen(); }
-        if (k === "d" || k === "arrowright") { e.preventDefault(); charIdx = (charIdx + 1) % CHARACTERS.length; renderCharacterScreen(); }
+        if (k === "a" || k === "arrowleft") { e.preventDefault(); _charNav(-1); }
+        if (k === "d" || k === "arrowright") { e.preventDefault(); _charNav(1); }
         if (k === " " || k === "enter") { e.preventDefault(); confirmCharacter(); }
         if (k === "escape" || k === "backspace") { e.preventDefault(); mState = "difficulty"; showDifficultyScreen(pendingSlot); }
         return;

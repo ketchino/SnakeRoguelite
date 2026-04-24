@@ -2,6 +2,21 @@
 var slotDeleteFocused = false;
 var slotDeleteConfirm = false; // Conferma eliminazione salvataggio
 
+/* ===== HOVER→SELECTION HELPER ===== */
+// Sposta la classe .selected sull'elemento hoverato, rimuovendola dai fratelli
+function _hoverSelect(el, idx, idxVar) {
+    var parent = el.parentElement;
+    if (!parent) return;
+    var siblings = parent.children;
+    for (var si = 0; si < siblings.length; si++) {
+        var btns = siblings[si].querySelectorAll('.btn');
+        if (btns.length === 0 && siblings[si].classList.contains('btn')) btns = [siblings[si]];
+        btns.forEach(function(b) { b.classList.remove('selected'); });
+        if (siblings[si].classList.contains('btn')) siblings[si].classList.remove('selected');
+    }
+    el.classList.add('selected');
+}
+
 /* ===== DIFFICULTY DEFINITIONS ===== */
 var DIFFICULTIES = [
     { id: "peaceful", name: "PEACEFUL", icon: "\u2728", color: "#4ade80", cssClass: "diff-peaceful", nameClass: "peaceful", desc: "Nessun boss o nemico. Esplora in tranquillita." },
@@ -205,6 +220,7 @@ function _renderDiffUI() {
         var desc = document.createElement("span"); desc.className = "diff-desc"; desc.textContent = diff.desc;
         btn.appendChild(icon); btn.appendChild(name); btn.appendChild(desc);
         btn.onclick = function() { diffIdx = i; selectedDifficulty = diff.id; confirmDifficulty(); };
+        btn.onmouseenter = function() { diffIdx = i; _renderDiffUI(); };
         diffGrid.appendChild(btn);
     });
 
@@ -213,6 +229,7 @@ function _renderDiffUI() {
     var backBtn = document.createElement("div"); backBtn.className = "btn slot-btn" + (diffIdx === 3 ? " selected" : ""); backBtn.style.cssText = "margin-top:14px;width:200px";
     if (diffIdx !== 3) backBtn.style.opacity = ".6";
     backBtn.textContent = "\u2190 INDIETRO"; backBtn.onclick = function() { mState = "slots"; showSlotMenu(); };
+    backBtn.onmouseenter = function() { diffIdx = 3; _renderDiffUI(); };
     MC.appendChild(backBtn);
 }
 
@@ -352,7 +369,9 @@ function renderRelics() {
         var raDiv = document.createElement("div"); raDiv.className = "rl " + rcClass(r.ra); raDiv.textContent = r.ra.toUpperCase();
         var descSmall = document.createElement("small"); descSmall.textContent = r.desc;
         btn.appendChild(iconB); btn.appendChild(nameSpan); btn.appendChild(raDiv); btn.appendChild(descSmall);
-        btn.onclick = function () { applyRelic(r); }; pickDiv.appendChild(btn);
+        btn.onclick = function () { applyRelic(r); };
+        btn.onmouseenter = function() { mIdx = i; var bs = pickDiv.querySelectorAll('.relic-btn'); bs.forEach(function(b,bi) { if(bi===i) b.classList.add('selected'); else b.classList.remove('selected'); }); };
+        pickDiv.appendChild(btn);
     });
     OVC.appendChild(pickDiv);
 }
@@ -427,9 +446,9 @@ function pauseGame() {
     if (codexFab) codexFab.style.display = "block";
     if (typeof playPauseMusic === "function") playPauseMusic();
     var h2 = document.createElement("h2"); h2.style.cssText = "font-family:var(--fd);color:var(--accent);font-size:24px;letter-spacing:4px"; h2.textContent = "\u23F8\uFE0F PAUSA"; OVC.appendChild(h2);
-    var resumeBtn = document.createElement("div"); resumeBtn.className = "btn slot-btn selected"; resumeBtn.style.marginTop = "12px"; resumeBtn.textContent = "\u25B6\uFE0F RIPRENDI"; resumeBtn.onclick = resumeGame; OVC.appendChild(resumeBtn);
-    var settBtn = document.createElement("div"); settBtn.className = "btn slot-btn"; settBtn.style.cssText = "margin-top:8px;opacity:.7"; settBtn.textContent = "\u2699\uFE0F IMPOSTAZIONI"; settBtn.onclick = function () { hideOv(); closePauseRelicPanel(); showSettings(); }; OVC.appendChild(settBtn);
-    var abandonBtn = document.createElement("div"); abandonBtn.className = "btn slot-btn"; abandonBtn.style.cssText = "margin-top:8px;opacity:.5"; abandonBtn.textContent = "\uD83D\uDEAA TORNA AL MEN\u00D9"; abandonBtn.onclick = abandonRun; OVC.appendChild(abandonBtn);
+    var resumeBtn = document.createElement("div"); resumeBtn.className = "btn slot-btn selected"; resumeBtn.style.marginTop = "12px"; resumeBtn.textContent = "\u25B6\uFE0F RIPRENDI"; resumeBtn.onclick = resumeGame; resumeBtn.onmouseenter = function() { mIdx = 0; var bs = OVC.querySelectorAll('.slot-btn'); bs.forEach(function(b,bi) { if(bi===0) b.classList.add('selected'); else b.classList.remove('selected'); }); }; OVC.appendChild(resumeBtn);
+    var settBtn = document.createElement("div"); settBtn.className = "btn slot-btn"; settBtn.style.cssText = "margin-top:8px;opacity:.7"; settBtn.textContent = "\u2699\uFE0F IMPOSTAZIONI"; settBtn.onclick = function () { hideOv(); closePauseRelicPanel(); showSettings(); }; settBtn.onmouseenter = function() { mIdx = 1; var bs = OVC.querySelectorAll('.slot-btn'); bs.forEach(function(b,bi) { if(bi===1) b.classList.add('selected'); else b.classList.remove('selected'); }); }; OVC.appendChild(settBtn);
+    var abandonBtn = document.createElement("div"); abandonBtn.className = "btn slot-btn"; abandonBtn.style.cssText = "margin-top:8px;opacity:.5"; abandonBtn.textContent = "\uD83D\uDEAA TORNA AL MEN\u00D9"; abandonBtn.onclick = abandonRun; abandonBtn.onmouseenter = function() { mIdx = 2; var bs = OVC.querySelectorAll('.slot-btn'); bs.forEach(function(b,bi) { if(bi===2) b.classList.add('selected'); else b.classList.remove('selected'); }); }; OVC.appendChild(abandonBtn);
     showOv();
     // Apri automaticamente il pannello reliquie a sinistra
     openPauseRelicPanel();
@@ -761,6 +780,7 @@ function renderSlots() {
                 showDifficultyScreen(s);
             }
         };
+        btn.onmouseenter = function() { mIdx = i; slotDeleteFocused = false; slotDeleteConfirm = false; renderSlots(); };
         wrapper.appendChild(btn);
         // Slider elimina salvataggio — sotto il bottone (solo se selezionato con dati)
         if (d && i === mIdx) {
@@ -796,7 +816,9 @@ function renderSlots() {
     var sBold = document.createElement("b"); sBold.textContent = "\u2699\uFE0F IMPOSTAZIONI";
     var sSmall = document.createElement("small"); sSmall.textContent = "Volume e altro";
     settBtn.appendChild(sBold); settBtn.appendChild(sSmall);
-    settBtn.onclick = function () { showSettings(); }; MC.appendChild(settBtn);
+    settBtn.onclick = function () { showSettings(); };
+    settBtn.onmouseenter = function() { mIdx = 3; renderSlots(); };
+    MC.appendChild(settBtn);
 }
 
 // Handle confirm in slot menu (3 slots + settings = 4 items, indices 0-3)
@@ -845,6 +867,26 @@ function confirmCharacter() {
     startSlot(pendingSlot);
 }
 
+/* ===== Carousel navigation helper (no full re-render) ===== */
+function _charNavTo(idx) {
+    charIdx = idx;
+    var container = document.getElementById("char-scroll-container");
+    if (!container) return;
+    var cards = container.querySelectorAll(".char-card");
+    cards.forEach(function(c, i) {
+        if (i === charIdx) c.classList.add("selected");
+        else c.classList.remove("selected");
+    });
+    var target = cards[charIdx];
+    if (target) {
+        var scrollPos = target.offsetLeft - (container.offsetWidth / 2) + (target.offsetWidth / 2);
+        container.scrollTo({ left: scrollPos, behavior: "smooth" });
+    }
+}
+function _charNav(dir) {
+    _charNavTo((charIdx + dir + CHARACTERS.length) % CHARACTERS.length);
+}
+
 function _renderCharUI() {
     var MC = document.getElementById("menu-content");
     MC.textContent = "";
@@ -856,7 +898,7 @@ function _renderCharUI() {
 
     // Freccia sinistra
     var arrowL = document.createElement("div"); arrowL.className = "char-nav-arrow char-nav-left"; arrowL.textContent = "\u25C0";
-    arrowL.onclick = function() { charIdx = (charIdx - 1 + CHARACTERS.length) % CHARACTERS.length; renderCharacterScreen(); };
+    arrowL.onclick = function() { _charNav(-1); };
     carouselWrap.appendChild(arrowL);
 
     // Container scrollabile
@@ -868,21 +910,19 @@ function _renderCharUI() {
         card.className = "char-card" + (i === charIdx ? " selected" : "");
         card.setAttribute("data-char-index", i);
 
-        // Preview: GIF per Frenk, canvas per gli altri
-        var previewWrap = document.createElement("div"); previewWrap.className = "char-preview";
-
+        // Sfondo GIF animata (se disponibile) in trasparenza dietro la card
         if (ch.gif) {
-            // Frenk: mostra GIF animata
-            var gifImg = document.createElement("img"); gifImg.src = ch.gif;
-            gifImg.className = "char-gif";
-            gifImg.style.cssText = "width:120px;height:120px;border-radius:10px;border:1px solid var(--border);object-fit:cover;";
-            previewWrap.appendChild(gifImg);
-        } else {
-            // Canvas preview normale
-            var canvas = document.createElement("canvas"); canvas.width = 120; canvas.height = 120; canvas.className = "char-canvas";
-            previewWrap.appendChild(canvas);
-            _drawSnakePreview(canvas, ch);
+            var bgImg = document.createElement("img"); bgImg.src = ch.gif;
+            bgImg.className = "char-card-bg";
+            bgImg.draggable = false;
+            card.appendChild(bgImg);
         }
+
+        // Preview: canvas per tutti i personaggi
+        var previewWrap = document.createElement("div"); previewWrap.className = "char-preview";
+        var canvas = document.createElement("canvas"); canvas.width = 120; canvas.height = 120; canvas.className = "char-canvas";
+        previewWrap.appendChild(canvas);
+        _drawSnakePreview(canvas, ch);
 
         var info = document.createElement("div"); info.className = "char-info";
         var nameEl = document.createElement("div"); nameEl.className = "char-name"; nameEl.style.color = ch.color; nameEl.textContent = ch.icon + " " + ch.name;
@@ -923,6 +963,7 @@ function _renderCharUI() {
 
         card.appendChild(previewWrap); card.appendChild(info);
         card.onclick = function() { charIdx = i; confirmCharacter(); };
+        card.onmouseenter = function() { _charNavTo(i); };
 
         charContainer.appendChild(card);
     });
@@ -931,21 +972,22 @@ function _renderCharUI() {
 
     // Freccia destra
     var arrowR = document.createElement("div"); arrowR.className = "char-nav-arrow char-nav-right"; arrowR.textContent = "\u25B6";
-    arrowR.onclick = function() { charIdx = (charIdx + 1) % CHARACTERS.length; renderCharacterScreen(); };
+    arrowR.onclick = function() { _charNav(1); };
     carouselWrap.appendChild(arrowR);
 
     MC.appendChild(carouselWrap);
 
-    // ESC hint per tornare indietro
-    var escHint = document.createElement("div"); escHint.style.cssText = "margin-top:12px;text-align:center;color:#555;font-size:12px";
-    escHint.textContent = "ESC = Indietro";
-    MC.appendChild(escHint);
+    // Pulsante INDIETRO (stile uguale al menù difficoltà)
+    var backBtn = document.createElement("div"); backBtn.className = "btn slot-btn"; backBtn.style.cssText = "margin-top:14px;width:200px;opacity:.6";
+    backBtn.textContent = "\u2190 INDIETRO"; backBtn.onclick = function() { mState = "difficulty"; showDifficultyScreen(pendingSlot); };
+    MC.appendChild(backBtn);
 
-    // Scroll la card selezionata al centro del carousel
+    // Centra la card selezionata senza scroll-snap (scroll programmatico)
     requestAnimationFrame(function() {
         var selCard = charContainer.querySelector(".char-card.selected");
         if (selCard) {
-            selCard.scrollIntoView({ inline: "center", behavior: "smooth", block: "nearest" });
+            var scrollPos = selCard.offsetLeft - (charContainer.offsetWidth / 2) + (selCard.offsetWidth / 2);
+            charContainer.scrollLeft = scrollPos;
         }
     });
 }
