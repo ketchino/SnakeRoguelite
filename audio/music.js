@@ -117,17 +117,27 @@ function fadeOutAndStop(callback) {
     }, stepTime);
 }
 
-// --- Seamless loop: reset currentTime before the end ---
+// --- Seamless loop: usa loop nativo del browser + fallback watcher ---
 function startLoopWatch(audio) {
     stopLoopWatch();
     if (!audio || !audio.duration || !isFinite(audio.duration)) return;
+    // Imposta la proprieta' loop nativa del browser (supporto migliore del reset manuale)
+    audio.loop = true;
+    // Fallback watcher: se il loop nativo non funziona (alcuni browser),
+    // riavvia la traccia con un piccolo margine per evitare gap
     ostLoopWatch = setInterval(function () {
         if (!currentOstAudio || currentOstAudio.paused || !currentOstAudio.duration) return;
         var remaining = currentOstAudio.duration - currentOstAudio.currentTime;
-        if (remaining < 0.25 && remaining > 0) {
+        // Se siamo molto vicini alla fine e il loop nativo non e' scattato, riavvia manualmente
+        if (remaining < 0.15 && remaining > 0) {
             currentOstAudio.currentTime = 0;
         }
-    }, 80);
+        // Safety: se per qualche motivo currentTime e' oltre duration, resetta
+        if (currentOstAudio.currentTime >= currentOstAudio.duration) {
+            currentOstAudio.currentTime = 0;
+            if (currentOstAudio.paused) currentOstAudio.play().catch(function() {});
+        }
+    }, 50); // Check ogni 50ms per maggiore reattivita'
 }
 
 function stopLoopWatch() {
@@ -183,11 +193,15 @@ function beginOst(key) {
         if (ostIsPlaying) startLoopWatch(audio);
     };
 
-    // Se l'audio finisce (non dovrebbe col loop watcher, ma per sicurezza)
+    // Se l'audio finisce (non dovrebbe col loop nativo + watcher, ma per sicurezza)
     audio.onended = function () {
         if (currentOstKey === key) {
-            audio.currentTime = 0;
-            audio.play().catch(function () {});
+            // Il loop nativo dovrebbe gia' gestire il riavvio,
+            // ma se per qualche motivo non funziona, riavvia manualmente
+            if (!audio.loop) {
+                audio.currentTime = 0;
+                audio.play().catch(function () {});
+            }
         }
     };
 

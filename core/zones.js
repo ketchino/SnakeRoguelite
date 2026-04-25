@@ -1,6 +1,7 @@
 /* ===== ZONE & MENU CORE ===== */
 var slotDeleteFocused = false;
 var slotDeleteConfirm = false; // Conferma eliminazione salvataggio
+var slotDeleteConfirmIdx = -1; // Indice dello slot in fase di conferma
 
 /* ===== HOVER→SELECTION HELPER ===== */
 // Sposta la classe .selected sull'elemento hoverato, rimuovendola dai fratelli
@@ -327,6 +328,8 @@ function levelUp() {
     picks = [];
     var pool = RELICS.filter(function(r) {
         if (r.w <= 0) return false;
+        // Escludi reliquie noStack già possedute (inutile riproporle)
+        if (r.noStack && G.relics.indexOf(r.id) !== -1) return false;
         if (r.bossRelic) {
             // Boss relic: include nella pool se il boss è stato sbloccato
             // (persistente tra le run tramite localStorage)
@@ -334,8 +337,6 @@ function levelUp() {
             var bossMap = {piuma:"corvo",occhiolupo:"lupo",linguarospo:"rospo",coronatiranno:"tiranno",scagliadraga:"draga",frammentovuoto:"vuoto",pelleprimordiale:"primordiale"};
             bossId = bossMap[r.id];
             if (!bossId) return false;
-            // Se il giocatore ha già questa reliquia nella run corrente, non proporla di nuovo
-            if (G.relics.indexOf(r.id) !== -1) return false;
             // Controlla sia gli unlock persistenti (localStorage) che quelli della run corrente
             var persistentUnlocks = loadBossUnlocks();
             return persistentUnlocks.indexOf(bossId) !== -1 ||
@@ -659,6 +660,10 @@ function useKunai() {
     tail.x = tempX;
     tail.y = tempY;
 
+    // Inverti direzione dopo il teletrasporto (vai nella direzione opposta)
+    G.dir = { x: -G.dir.x, y: -G.dir.y };
+    G.inputBuffer = []; // Resetta il buffer per evitare direzioni contraddittorie
+
     // Kill enemies at destination (like spawn invincibility)
     for (var ei = G.enemies.length - 1; ei >= 0; ei--) {
         if (G.enemies[ei].x === destX && G.enemies[ei].y === destY) {
@@ -742,7 +747,7 @@ function renderCodexScreen() {
 }
 
 function showSlotMenu() {
-    running = false; paused = false; mState = "slots"; mIdx = 0; slotDeleteFocused = false; slotDeleteConfirm = false;
+    running = false; paused = false; mState = "slots"; mIdx = 0; slotDeleteFocused = false; slotDeleteConfirm = false; slotDeleteConfirmIdx = -1;
     clearInterval(loop); resetTheme(); resetRB();
     if (typeof hideMobileControls === "function") hideMobileControls();
     ZONE_BAR.style.display = "none";
@@ -787,32 +792,34 @@ function renderSlots() {
                 showDifficultyScreen(s);
             }
         };
-        btn.onmouseenter = function() { mIdx = i; slotDeleteFocused = false; slotDeleteConfirm = false; renderSlots(); };
+        btn.onmouseenter = function() {
+            if (mIdx === i && !slotDeleteFocused && (!slotDeleteConfirm || slotDeleteConfirmIdx !== i)) return;
+            mIdx = i; slotDeleteFocused = false; if (slotDeleteConfirmIdx !== i) { slotDeleteConfirm = false; slotDeleteConfirmIdx = -1; } renderSlots();
+        };
         wrapper.appendChild(btn);
-        // Slider elimina salvataggio — sotto il bottone (solo se selezionato con dati)
-        if (d && i === mIdx) {
+        // Slider elimina salvataggio — sotto il bottone (se lo slot ha dati)
+        if (d) {
             var delSlider = document.createElement("div");
-            var isConfirming = slotDeleteFocused && slotDeleteConfirm && i === mIdx;
-            delSlider.className = "slot-delete-slider" + (slotDeleteFocused ? " focused" : "") + (isConfirming ? " confirming" : "");
+            var isConfirming = slotDeleteConfirm && slotDeleteConfirmIdx === i;
+            // Nascondi lo slider quando il focus è sullo slot (non sul delete)
+            // Lo slider è sempre visibile senza animazione per evitare re-trigger
+            delSlider.className = "slot-delete-slider visible" + (slotDeleteFocused && i === mIdx ? " focused" : "") + (isConfirming ? " confirming" : "");
             delSlider.textContent = isConfirming ? "\u26A0\uFE0F Sei sicuro? Premi di nuovo" : "\uD83D\uDDD1\uFE0F Elimina salvataggio";
             delSlider.onclick = function(e) {
                 e.stopPropagation();
-                if (!slotDeleteConfirm) {
+                if (!slotDeleteConfirm || slotDeleteConfirmIdx !== i) {
                     slotDeleteConfirm = true;
+                    slotDeleteConfirmIdx = i;
                     renderSlots();
                 } else {
                     localStorage.removeItem("snake_slot_" + s);
                     slotDeleteFocused = false;
                     slotDeleteConfirm = false;
+                    slotDeleteConfirmIdx = -1;
                     renderSlots();
                 }
             };
             wrapper.appendChild(delSlider);
-            requestAnimationFrame(function() {
-                requestAnimationFrame(function() {
-                    delSlider.classList.add("visible");
-                });
-            });
         }
         slotsWrap.appendChild(wrapper);
     });
@@ -824,22 +831,24 @@ function renderSlots() {
     var sSmall = document.createElement("small"); sSmall.textContent = "Volume e altro";
     settBtn.appendChild(sBold); settBtn.appendChild(sSmall);
     settBtn.onclick = function () { showSettings(); };
-    settBtn.onmouseenter = function() { mIdx = 3; renderSlots(); };
+    settBtn.onmouseenter = function() { if (mIdx === 3) return; mIdx = 3; renderSlots(); };
     MC.appendChild(settBtn);
 }
 
 // Handle confirm in slot menu (3 slots + settings = 4 items, indices 0-3)
 function handleSlotConfirm() {
     if (slotDeleteFocused && mIdx < 3) {
-        if (!slotDeleteConfirm) {
+        if (!slotDeleteConfirm || slotDeleteConfirmIdx !== mIdx) {
             // Prima pressione: mostra conferma
             slotDeleteConfirm = true;
+            slotDeleteConfirmIdx = mIdx;
             renderSlots();
         } else {
             // Seconda pressione: elimina davvero
             localStorage.removeItem("snake_slot_" + (mIdx + 1));
             slotDeleteFocused = false;
             slotDeleteConfirm = false;
+            slotDeleteConfirmIdx = -1;
             renderSlots();
         }
     } else if (mIdx < 3) {
@@ -1154,6 +1163,8 @@ function renderKeyboardSettings(container) {
     hint.textContent = "Clicca un tasto per rimapparne l'azione, poi premi il nuovo tasto.";
     container.appendChild(hint);
 
+    var grid = document.createElement("div"); grid.className = "keymap-grid";
+
     KEYMAP_ACTIONS.forEach(function(action, i) {
         var row = document.createElement("div");
         row.className = "setting-row keymap-row" + (settingsIdx === i ? " selected" : "");
@@ -1176,17 +1187,19 @@ function renderKeyboardSettings(container) {
         };
 
         row.appendChild(label); row.appendChild(desc); row.appendChild(keyBtn);
-        container.appendChild(row);
+        grid.appendChild(row);
     });
 
     // Reset button
-    var resetRow = document.createElement("div"); resetRow.className = "setting-row keymap-row" + (settingsIdx === KEYMAP_ACTIONS.length ? " selected" : "");
+    var resetRow = document.createElement("div"); resetRow.className = "setting-row keymap-row reset-row" + (settingsIdx === KEYMAP_ACTIONS.length ? " selected" : "");
     var resetLabel = document.createElement("span"); resetLabel.className = "setting-label"; resetLabel.textContent = "RIPRISTINA";
     var resetDesc = document.createElement("span"); resetDesc.className = "keymap-desc"; resetDesc.textContent = "Torna ai tasti predefiniti";
     resetRow.appendChild(resetLabel); resetRow.appendChild(resetDesc);
     resetRow.onclick = function() { resetKeymap(); renderSettingsScreen(); };
     resetRow.style.cursor = "pointer";
-    container.appendChild(resetRow);
+    grid.appendChild(resetRow);
+
+    container.appendChild(grid);
 }
 
 // Controller mapping state
@@ -1195,7 +1208,11 @@ var gpButtonMap = {
     cancel: { label: "ANNULLA", desc: "Indietro / Annulla", defaultBtn: "B / Circle (1)" },
     ability: { label: "ABILITA", desc: "Usa abilita speciale", defaultBtn: "X / Square (2)" },
     codex: { label: "CODEX", desc: "Apri codex", defaultBtn: "Y / Triangle (3)" },
-    pause: { label: "PAUSA", desc: "Pausa gioco", defaultBtn: "Start (9)" }
+    pause: { label: "PAUSA", desc: "Pausa gioco", defaultBtn: "Start (9)" },
+    dpad_up: { label: "D-PAD SU", desc: "Direzione su", defaultBtn: "D-Pad Up (12)" },
+    dpad_down: { label: "D-PAD GIU", desc: "Direzione giu", defaultBtn: "D-Pad Down (13)" },
+    dpad_left: { label: "D-PAD SX", desc: "Direzione sinistra", defaultBtn: "D-Pad Left (14)" },
+    dpad_right: { label: "D-PAD DX", desc: "Direzione destra", defaultBtn: "D-Pad Right (15)" }
 };
 
 // Controller mapping save/load
@@ -1206,7 +1223,7 @@ function saveGpMapping(mapping) { localStorage.setItem("snake_gp_mapping", JSON.
 function getGpButton(actionId) { var m = loadGpMapping(); return m[actionId] !== undefined ? m[actionId] : null; }
 function formatGpBtn(btnIdx) {
     if (btnIdx === null || btnIdx === undefined) return "?";
-    var names = { 0: "A / Cross", 1: "B / Circle", 2: "X / Square", 3: "Y / Triangle", 4: "LB", 5: "RB", 6: "LT", 7: "RT", 8: "Back", 9: "Start", 10: "L3", 11: "R3" };
+    var names = { 0: "A / Cross", 1: "B / Circle", 2: "X / Square", 3: "Y / Triangle", 4: "LB", 5: "RB", 6: "LT", 7: "RT", 8: "Back", 9: "Start", 10: "L3", 11: "R3", 12: "D-Pad Up", 13: "D-Pad Down", 14: "D-Pad Left", 15: "D-Pad Right" };
     return (names[btnIdx] || "Btn " + btnIdx) + " (" + btnIdx + ")";
 }
 
@@ -1215,8 +1232,10 @@ var gpMappingAction = null;
 
 function renderControllerSettings(container) {
     var hint = document.createElement("div"); hint.className = "settings-hint";
-    hint.textContent = "Clicca un'azione, poi premi il tasto sul controller per rimapparlo.";
+    hint.textContent = "Clicca un'azione, poi premi il tasto sul controller per rimapparlo. Per il D-PAD, premi la direzione sul D-PAD.";
     container.appendChild(hint);
+
+    var grid = document.createElement("div"); grid.className = "keymap-grid";
 
     var actionIds = Object.keys(gpButtonMap);
     actionIds.forEach(function(actionId, i) {
@@ -1243,20 +1262,23 @@ function renderControllerSettings(container) {
         };
 
         row.appendChild(label); row.appendChild(desc); row.appendChild(keyBtn);
-        container.appendChild(row);
+        grid.appendChild(row);
     });
 
     // Reset button
-    var resetRow = document.createElement("div"); resetRow.className = "setting-row keymap-row" + (settingsIdx === actionIds.length ? " selected" : "");
+    var resetRow = document.createElement("div"); resetRow.className = "setting-row keymap-row reset-row" + (settingsIdx === actionIds.length ? " selected" : "");
     var resetLabel = document.createElement("span"); resetLabel.className = "setting-label"; resetLabel.textContent = "RIPRISTINA";
     var resetDesc = document.createElement("span"); resetDesc.className = "keymap-desc"; resetDesc.textContent = "Torna alla mappatura predefinita";
     resetRow.appendChild(resetLabel); resetRow.appendChild(resetDesc);
     resetRow.onclick = function() { localStorage.removeItem("snake_gp_mapping"); renderSettingsScreen(); };
     resetRow.style.cursor = "pointer";
-    container.appendChild(resetRow);
+    grid.appendChild(resetRow);
 
-    // Deadzone slider
+    container.appendChild(grid);
+
+    // Deadzone slider (full width, outside grid)
     var dzRow = document.createElement("div"); dzRow.className = "setting-row" + (settingsIdx === actionIds.length + 1 ? " selected" : "");
+    dzRow.style.maxWidth = "640px";
     var dzLabel = document.createElement("span"); dzLabel.className = "setting-label"; dzLabel.textContent = "Deadzone";
     var dzSlider = document.createElement("input"); dzSlider.type = "range"; dzSlider.min = "10"; dzSlider.max = "80"; dzSlider.value = Math.round(gpDeadzone * 100);
     dzSlider.className = "setting-slider";

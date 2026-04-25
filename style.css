@@ -530,6 +530,29 @@ canvas { display: block }
     position: relative;
     border-radius: 12px;
     overflow: visible;
+    transition: border-color .2s, filter .2s;
+}
+/* Bordo + glow sul wrapper SOLO quando ha lo slider elimina */
+.slot-wrapper:has(.slot-delete-slider) {
+    border: 1px solid transparent;
+}
+.slot-wrapper:has(.slot-delete-slider):has(.slot-btn-h.selected) {
+    border-color: var(--accent);
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 30%, transparent));
+}
+.slot-wrapper:has(.slot-delete-slider):has(.slot-btn-h:hover) {
+    border-color: var(--accent);
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 20%, transparent));
+}
+/* Rimuovi bordo e glow diretto dal bottone dentro il wrapper CON slider — ci pensa il wrapper */
+.slot-wrapper:has(.slot-delete-slider) .slot-btn-h.selected {
+    border-color: transparent;
+    box-shadow: none;
+    transform: none;
+}
+.slot-wrapper:has(.slot-delete-slider) .slot-btn-h:hover {
+    border-color: transparent;
+    box-shadow: none;
 }
 
 /* Slider elimina salvataggio — scivola fuori sotto lo slot */
@@ -538,10 +561,10 @@ canvas { display: block }
     color: #fca5a5;
     border: none;
     border-top: 1px solid rgba(239,68,68,.35);
-    border-radius: 0 0 10px 10px;
-    margin-top: -1px;
+    border-radius: 0 0 12px 12px;
+    margin-top: -2px;
     font-family: var(--fd);
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 1px;
     text-align: center;
@@ -551,22 +574,31 @@ canvas { display: block }
     max-height: 0;
     overflow: hidden;
     opacity: 0;
-    padding: 0 8px;
+    padding: 0 12px;
+    min-height: 0;
     transition: max-height 0.35s cubic-bezier(.34,1.56,.64,1),
                 opacity 0.25s ease,
-                padding 0.35s cubic-bezier(.34,1.56,.64,1);
+                padding 0.35s cubic-bezier(.34,1.56,.64,1),
+                min-height 0.35s cubic-bezier(.34,1.56,.64,1);
 }
 .slot-delete-slider.visible {
-    max-height: 30px;
+    max-height: 44px;
+    min-height: 38px;
     opacity: 1;
-    padding: 5px 8px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 .slot-delete-slider:hover {
     background: rgba(185,28,28,.95);
 }
 .slot-delete-slider.confirming {
     background: rgba(185,28,28,.95) !important;
-    border: 1px solid #fbbf24 !important;
+    border-top: 1px solid #fbbf24 !important;
+    border-bottom: 1px solid #fbbf24 !important;
+    border-left: none !important;
+    border-right: none !important;
     color: #fbbf24 !important;
     animation: confirmPulse 0.6s ease-in-out infinite;
 }
@@ -583,9 +615,9 @@ canvas { display: block }
     align-items: center;
     gap: 6px;
 }
-/* Quando lo slider è presente, il bottone mantiene il bordo completo su tutti i lati */
+/* Quando lo slider è presente, il bottone ha bordi arrotondati solo in alto */
 .slot-wrapper:has(.slot-delete-slider) .slot-btn-h {
-    border-radius: 12px;
+    border-radius: 12px 12px 0 0;
 }
 
 /* Slider elimina con focus da tastiera/gamepad */
@@ -867,6 +899,8 @@ canvas { display: block }
     overflow-x: auto;
     overflow-y: hidden;
     padding: 10px 0;
+    padding-left: max(14px, calc(50% - 210px));
+    padding-right: max(14px, calc(50% - 210px));
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
 }
@@ -1075,6 +1109,10 @@ canvas { display: block }
 @media (max-width: 650px) {
     .char-card { width: 300px; padding: 14px 12px; gap: 10px; }
     .char-carousel-wrap { max-width: 100%; }
+    .char-container {
+        padding-left: max(10px, calc(50% - 150px));
+        padding-right: max(10px, calc(50% - 150px));
+    }
 }
 
 /* ===== MOBILE ===== */
@@ -1105,8 +1143,8 @@ canvas { display: block }
     }
     #zone-name { font-size: 16px }
     .slots-grid { grid-template-columns: 1fr; max-width: 340px; }
-    .slot-delete-slider { font-size: 8px; }
-    .slot-delete-slider.visible { padding: 3px 6px; }
+    .slot-delete-slider { font-size: 10px; }
+    .slot-delete-slider.visible { padding: 6px 8px; min-height: 34px; }
     .slot-btn-h { padding: 14px 10px; }
 }
 /* ===== FAB CODEX BUTTON ===== */
@@ -1364,7 +1402,7 @@ body:not(.codex-open) #menu-screen { transition: filter 0.3s, transform 0.3s; }
     border-radius: 6px 6px 0 0;
     background: rgba(255,255,255,0.02);
 }
-.settings-tab:hover { color: #888; background: rgba(255,255,255,0.04); }
+.settings-tab:hover { color: #aaa; background: rgba(255,255,255,0.04); cursor: pointer; }
 .settings-tab.active {
     color: var(--accent);
     border-bottom: 2px solid var(--accent);
@@ -1393,7 +1431,8 @@ body:not(.codex-open) #menu-screen { transition: filter 0.3s, transform 0.3s; }
     border-radius: 10px;
     transition: border-color .2s, box-shadow .2s;
 }
-.setting-row.selected {
+.setting-row.selected,
+.setting-row:hover {
     border-color: var(--accent);
     box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 20%, transparent);
 }
@@ -1444,10 +1483,23 @@ body:not(.codex-open) #menu-screen { transition: filter 0.3s, transform 0.3s; }
 }
 
 /* ===== KEY MAPPING SETTINGS ===== */
-.keymap-row {
+.keymap-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: 640px;
+}
+.keymap-grid .keymap-row {
+    margin: 0;
+    max-width: none;
     flex-wrap: wrap;
     gap: 6px 12px;
-    padding: 12px 14px;
+    padding: 10px 12px;
+}
+.keymap-grid .keymap-row.reset-row {
+    grid-column: 1 / -1;
+    justify-content: center;
 }
 .keymap-desc {
     color: #666;

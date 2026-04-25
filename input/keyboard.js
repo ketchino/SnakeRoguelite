@@ -182,16 +182,16 @@ document.addEventListener("keydown", function (e) {
         // W/Up: go up from delete/settings to slot
         // S/Down: go down to delete slider (if slot has data) or settings (index 3)
         var hasSaveData = mIdx < 3 && !!localStorage.getItem("snake_slot_" + (mIdx + 1));
-        if (k === "a" || k === "arrowleft") { slotDeleteFocused = false; slotDeleteConfirm = false; mIdx = Math.max(0, Math.min(2, mIdx - 1)); renderSlots(); }
-        if (k === "d" || k === "arrowright") { slotDeleteFocused = false; slotDeleteConfirm = false; mIdx = Math.min(2, mIdx + 1); renderSlots(); }
+        if (k === "a" || k === "arrowleft") { slotDeleteFocused = false; slotDeleteConfirm = false; slotDeleteConfirmIdx = -1; mIdx = Math.max(0, Math.min(2, mIdx - 1)); renderSlots(); }
+        if (k === "d" || k === "arrowright") { slotDeleteFocused = false; slotDeleteConfirm = false; slotDeleteConfirmIdx = -1; mIdx = Math.min(2, mIdx + 1); renderSlots(); }
         if (k === "s" || k === "arrowdown") {
-            if (slotDeleteFocused) { slotDeleteFocused = false; slotDeleteConfirm = false; mIdx = 3; }
+            if (slotDeleteFocused) { slotDeleteFocused = false; slotDeleteConfirm = false; slotDeleteConfirmIdx = -1; mIdx = 3; }
             else if (hasSaveData) { slotDeleteFocused = true; }
             else { mIdx = 3; }
             renderSlots();
         }
         if (k === "w" || k === "arrowup") {
-            if (slotDeleteFocused) { slotDeleteFocused = false; slotDeleteConfirm = false; }
+            if (slotDeleteFocused) { slotDeleteFocused = false; slotDeleteConfirm = false; slotDeleteConfirmIdx = -1; }
             else if (mIdx === 3) { mIdx = 1; }
             renderSlots();
         }

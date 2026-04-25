@@ -24,10 +24,15 @@ function pollGamepad() {
         var gpId = (gp.id || "").toLowerCase();
         var isPlayStation = gpId.indexOf("playstation") !== -1 || gpId.indexOf("dualshock") !== -1 || gpId.indexOf("dualsense") !== -1 || gpId.indexOf("054c") !== -1;
 
-        // D-pad as buttons: 12=Up, 13=Down, 14=Left, 15=Right
+        // D-pad as buttons: default 12=Up, 13=Down, 14=Left, 15=Right (customizable)
+        var gpMapping = loadGpMapping();
+        var dpadUpIdx = gpMapping.dpad_up !== undefined ? gpMapping.dpad_up : 12;
+        var dpadDownIdx = gpMapping.dpad_down !== undefined ? gpMapping.dpad_down : 13;
+        var dpadLeftIdx = gpMapping.dpad_left !== undefined ? gpMapping.dpad_left : 14;
+        var dpadRightIdx = gpMapping.dpad_right !== undefined ? gpMapping.dpad_right : 15;
         var dpadBtnMap = [
-            [12, "arrowup"], [13, "arrowdown"],
-            [14, "arrowleft"], [15, "arrowright"]
+            [dpadUpIdx, "arrowup"], [dpadDownIdx, "arrowdown"],
+            [dpadLeftIdx, "arrowleft"], [dpadRightIdx, "arrowright"]
         ];
         var dpadPressed = { up: false, down: false, left: false, right: false };
 
@@ -94,32 +99,60 @@ function pollGamepad() {
         gpPrevAxes[gpKey] = { x: axisX, y: axisY };
 
         // Confirm/Cancel/Codex buttons
-        // Support custom controller mapping
-        var gpMapping = loadGpMapping();
+        // gpMapping already loaded above for D-PAD
         var confirmBtnIdx = gpMapping.confirm !== undefined ? gpMapping.confirm : 0;
         var cancelBtnIdx = gpMapping.cancel !== undefined ? gpMapping.cancel : 1;
         var abilityBtnIdx = gpMapping.ability !== undefined ? gpMapping.ability : 2;
         var codexBtnIdx = gpMapping.codex !== undefined ? gpMapping.codex : 3;
         var pauseBtnIdx = gpMapping.pause !== undefined ? gpMapping.pause : 9;
 
-        // If controller mapping is listening, capture any button press
+        // If controller mapping is listening, capture any button press or D-PAD axis
         if (typeof gpMappingListening !== 'undefined' && gpMappingListening && typeof gpMappingAction !== 'undefined' && gpMappingAction) {
+            var captured = false;
             for (var mbi = 0; mbi < gp.buttons.length; mbi++) {
                 if (gp.buttons[mbi] && gp.buttons[mbi].pressed) {
                     var mbKey = "gp_" + gi + "_map_" + mbi;
                     if (!gpPrevButtons[mbKey]) {
-                        // Salva la mappatura
                         var mapping = loadGpMapping();
                         mapping[gpMappingAction] = mbi;
                         saveGpMapping(mapping);
                         gpMappingListening = false;
                         gpMappingAction = null;
+                        captured = true;
                         if (typeof renderSettingsScreen === "function") renderSettingsScreen();
                     }
                     gpPrevButtons[mbKey] = true;
                 } else {
                     var mbKey2 = "gp_" + gi + "_map_" + mbi;
                     gpPrevButtons[mbKey2] = false;
+                }
+            }
+            // Also capture D-PAD axis movement for DualSense (axes 6-7 or 8-9)
+            if (!captured && gpMappingAction && gpMappingAction.indexOf("dpad_") === 0) {
+                var dpadAxisPairs = [[6, 7], [8, 9]];
+                for (var pai = 0; pai < dpadAxisPairs.length; pai++) {
+                    var axH = dpadAxisPairs[pai][0];
+                    var axV = dpadAxisPairs[pai][1];
+                    if (gp.axes.length <= Math.max(axH, axV)) continue;
+                    var aX = gp.axes[axH] || 0;
+                    var aY = gp.axes[axV] || 0;
+                    var pKey = "gp_" + gi + "_dpadmap_" + pai;
+                    var prevA = gpPrevDpad[pKey] || { x: 0, y: 0 };
+                    // Map axis direction to D-PAD button index
+                    var dpadBtnIdx = null;
+                    if (aX < -0.5 && prevA.x >= -0.5) dpadBtnIdx = 14; // Left
+                    else if (aX > 0.5 && prevA.x <= 0.5) dpadBtnIdx = 15; // Right
+                    if (aY < -0.5 && prevA.y >= -0.5) dpadBtnIdx = 12; // Up
+                    else if (aY > 0.5 && prevA.y <= 0.5) dpadBtnIdx = 13; // Down
+                    if (dpadBtnIdx !== null) {
+                        var mapping2 = loadGpMapping();
+                        mapping2[gpMappingAction] = dpadBtnIdx;
+                        saveGpMapping(mapping2);
+                        gpMappingListening = false;
+                        gpMappingAction = null;
+                        if (typeof renderSettingsScreen === "function") renderSettingsScreen();
+                    }
+                    gpPrevDpad[pKey] = { x: aX, y: aY };
                 }
             }
             // Continue with normal D-pad navigation
@@ -286,18 +319,18 @@ function simulateKey(key) {
     if (mState === "slots") {
         var hasSaveData = mIdx < 3 && !!localStorage.getItem("snake_slot_" + (mIdx + 1));
         if (k === "arrowup") {
-            if (slotDeleteFocused) { slotDeleteFocused = false; slotDeleteConfirm = false; }
+            if (slotDeleteFocused) { slotDeleteFocused = false; slotDeleteConfirm = false; slotDeleteConfirmIdx = -1; }
             else { mIdx = Math.max(0, mIdx - 1); if (mIdx > 3) mIdx = 3; }
             renderSlots();
         }
         if (k === "arrowdown") {
-            if (slotDeleteFocused) { slotDeleteFocused = false; slotDeleteConfirm = false; mIdx = 3; }
+            if (slotDeleteFocused) { slotDeleteFocused = false; slotDeleteConfirm = false; slotDeleteConfirmIdx = -1; mIdx = 3; }
             else if (hasSaveData) { slotDeleteFocused = true; }
             else { mIdx = Math.min(3, mIdx + 1); }
             renderSlots();
         }
-        if (k === "arrowleft") { slotDeleteFocused = false; slotDeleteConfirm = false; mIdx = Math.max(0, Math.min(2, mIdx - 1)); renderSlots(); }
-        if (k === "arrowright") { slotDeleteFocused = false; slotDeleteConfirm = false; mIdx = Math.min(2, mIdx + 1); renderSlots(); }
+        if (k === "arrowleft") { slotDeleteFocused = false; slotDeleteConfirm = false; slotDeleteConfirmIdx = -1; mIdx = Math.max(0, Math.min(2, mIdx - 1)); renderSlots(); }
+        if (k === "arrowright") { slotDeleteFocused = false; slotDeleteConfirm = false; slotDeleteConfirmIdx = -1; mIdx = Math.min(2, mIdx + 1); renderSlots(); }
         if (k === "enter") { handleSlotConfirm(); }
     } else if (mState === "leveling") {
         if (relicInputLocked) return;

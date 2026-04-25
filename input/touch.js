@@ -82,16 +82,16 @@ function createMobileControls() {
             }
             // Menu navigation with D-pad
             if (mState === "slots") {
-                if (dir === "left") { slotDeleteFocused = false; slotDeleteConfirm = false; mIdx = Math.max(0, Math.min(2, mIdx - 1)); renderSlots(); }
-                if (dir === "right") { slotDeleteFocused = false; slotDeleteConfirm = false; mIdx = Math.min(2, mIdx + 1); renderSlots(); }
+                if (dir === "left") { slotDeleteFocused = false; slotDeleteConfirm = false; slotDeleteConfirmIdx = -1; mIdx = Math.max(0, Math.min(2, mIdx - 1)); renderSlots(); }
+                if (dir === "right") { slotDeleteFocused = false; slotDeleteConfirm = false; slotDeleteConfirmIdx = -1; mIdx = Math.min(2, mIdx + 1); renderSlots(); }
                 if (dir === "down") {
-                    if (slotDeleteFocused) { slotDeleteFocused = false; slotDeleteConfirm = false; mIdx = 3; }
+                    if (slotDeleteFocused) { slotDeleteFocused = false; slotDeleteConfirm = false; slotDeleteConfirmIdx = -1; mIdx = 3; }
                     else if (mIdx < 3 && !!localStorage.getItem("snake_slot_" + (mIdx + 1))) { slotDeleteFocused = true; }
                     else { mIdx = 3; }
                     renderSlots();
                 }
                 if (dir === "up") {
-                    if (slotDeleteFocused) { slotDeleteFocused = false; slotDeleteConfirm = false; }
+                    if (slotDeleteFocused) { slotDeleteFocused = false; slotDeleteConfirm = false; slotDeleteConfirmIdx = -1; }
                     else if (mIdx === 3) { mIdx = 1; }
                     renderSlots();
                 }
