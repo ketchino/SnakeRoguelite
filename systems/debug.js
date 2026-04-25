@@ -58,7 +58,7 @@ function closeDebug() {
     }
 
     // Riprendi solo se il gioco è in uno stato giocabile
-    if (running && mState !== "paused" && mState !== "dead" && mState !== "leveling" && mState !== "slots" && mState !== "secretshop" && mState !== "settings" && mState !== "difficulty" && mState !== "character") {
+    if (running && mState !== "paused" && mState !== "dead" && mState !== "leveling" && mState !== "slots" && mState !== "secretshop" && mState !== "settings" && mState !== "setup") {
         paused = false; scheduleLoop();
     }
 }

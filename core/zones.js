@@ -25,6 +25,7 @@ var DIFFICULTIES = [
     { id: "hardcore", name: "HARDCORE", icon: "\uD83D\uDD25", color: "#f87171", cssClass: "diff-hardcore", nameClass: "hardcore", desc: "Piu nemici, -2 HP iniziali, velocita +20%." }
 ];
 var diffIdx = 1; // Default selected difficulty index
+var setupFocus = 1; // 0=difficoltà, 1=personaggio, 2=INIZIA PARTITA
 
 /* ===== CHARACTER DEFINITIONS ===== */
 var CHARACTERS = [
@@ -184,35 +185,36 @@ function applyCharacterModifiers(G) {
     }
 }
 
-/* ===== DIFFICULTY SELECTION SCREEN ===== */
-function showDifficultyScreen(s) {
+/* ===== SETUP SCREEN (DIFFICULTY + CHARACTER COMBINED) ===== */
+function showSetupScreen(s) {
     pendingSlot = s;
-    mState = "difficulty";
+    mState = "setup";
     diffIdx = 1; // Default selected = Default
+    charIdx = 0;
+    setupFocus = 1; // Focus sul personaggio di default
     if (codexFab) codexFab.style.display = "block";
-    _renderDiffUI();
+    _renderSetupUI();
 }
 
-function confirmDifficulty() {
-    if (diffIdx >= DIFFICULTIES.length) {
-        // Indietro selezionato
-        mState = "slots"; showSlotMenu(); return;
-    }
+function confirmSetup() {
     selectedDifficulty = DIFFICULTIES[diffIdx].id;
-    // Vai alla selezione del personaggio
-    showCharacterScreen();
+    selectedCharacter = CHARACTERS[charIdx].id;
+    startSlot(pendingSlot);
 }
 
-// diffIdx: 0=Peaceful, 1=Default, 2=Hardcore, 3=Indietro
-var DIFF_TOTAL = 4; // 3 difficoltà + 1 indietro
-
-function _renderDiffUI() {
+function _renderSetupUI() {
     var MC = document.getElementById("menu-content");
     MC.textContent = "";
-    var h1 = document.createElement("h1"); h1.textContent = "\uD83C\uDFAE SELEZIONA DIFFICOLTA"; MC.appendChild(h1);
+    MC.classList.add("setup-mode");
+    var h1 = document.createElement("h1"); h1.textContent = "\uD83D\uDC0D SNAKE ROGUELITE"; MC.appendChild(h1);
     var sub = document.createElement("p"); sub.className = "sub"; sub.textContent = "\uD83C\uDF3F GIARDINO #" + pendingSlot; MC.appendChild(sub);
 
-    var diffGrid = document.createElement("div"); diffGrid.className = "diff-grid";
+    // ===== DIFFICOLTÀ (orizzontale) =====
+    var diffSection = document.createElement("div"); diffSection.className = "setup-section" + (setupFocus === 0 ? " focused" : "");
+    var diffLabel = document.createElement("div"); diffLabel.className = "setup-section-label"; diffLabel.textContent = "DIFFICOLTA";
+    diffSection.appendChild(diffLabel);
+
+    var diffGrid = document.createElement("div"); diffGrid.className = "diff-grid diff-grid-horizontal";
 
     DIFFICULTIES.forEach(function(diff, i) {
         var btn = document.createElement("div");
@@ -221,22 +223,122 @@ function _renderDiffUI() {
         var name = document.createElement("span"); name.className = "diff-name " + diff.nameClass; name.textContent = diff.name;
         var desc = document.createElement("span"); desc.className = "diff-desc"; desc.textContent = diff.desc;
         btn.appendChild(icon); btn.appendChild(name); btn.appendChild(desc);
-        btn.onclick = function() { diffIdx = i; selectedDifficulty = diff.id; confirmDifficulty(); };
-        btn.onmouseenter = function() { diffIdx = i; _renderDiffUI(); };
+        btn.onclick = function() { diffIdx = i; selectedDifficulty = diff.id; _renderSetupUI(); };
+        btn.onmouseenter = function() { if (diffIdx === i && setupFocus === 0) return; diffIdx = i; setupFocus = 0; _renderSetupUI(); };
         diffGrid.appendChild(btn);
     });
 
-    MC.appendChild(diffGrid);
+    diffSection.appendChild(diffGrid);
+    MC.appendChild(diffSection);
 
-    var backBtn = document.createElement("div"); backBtn.className = "btn slot-btn" + (diffIdx === 3 ? " selected" : ""); backBtn.style.cssText = "margin-top:14px;width:200px";
-    if (diffIdx !== 3) backBtn.style.opacity = ".6";
-    backBtn.textContent = "\u2190 INDIETRO"; backBtn.onclick = function() { mState = "slots"; showSlotMenu(); };
-    backBtn.onmouseenter = function() { diffIdx = 3; _renderDiffUI(); };
-    MC.appendChild(backBtn);
+    // ===== PERSONAGGIO (carosello) =====
+    var charSection = document.createElement("div"); charSection.className = "setup-section setup-char-section" + (setupFocus === 1 ? " focused" : "");
+    var charLabel = document.createElement("div"); charLabel.className = "setup-section-label"; charLabel.textContent = "PERSONAGGIO";
+    charSection.appendChild(charLabel);
+
+    var carouselWrap = document.createElement("div"); carouselWrap.className = "char-carousel-wrap";
+
+    var arrowL = document.createElement("div"); arrowL.className = "char-nav-arrow char-nav-left"; arrowL.textContent = "\u25C0";
+    arrowL.onclick = function() { setupFocus = 1; _charNav(-1); };
+    carouselWrap.appendChild(arrowL);
+
+    var charContainer = document.createElement("div"); charContainer.className = "char-container";
+    charContainer.id = "char-scroll-container";
+
+    CHARACTERS.forEach(function(ch, i) {
+        var card = document.createElement("div");
+        card.className = "char-card" + (i === charIdx ? " selected" : "");
+        card.setAttribute("data-char-index", i);
+
+        if (ch.gif) {
+            var bgImg = document.createElement("img"); bgImg.src = ch.gif;
+            bgImg.className = "char-card-bg"; bgImg.draggable = false;
+            card.appendChild(bgImg);
+        }
+
+        var previewWrap = document.createElement("div"); previewWrap.className = "char-preview";
+        var canvas = document.createElement("canvas"); canvas.width = 120; canvas.height = 120; canvas.className = "char-canvas";
+        previewWrap.appendChild(canvas);
+        _drawSnakePreview(canvas, ch);
+
+        var info = document.createElement("div"); info.className = "char-info";
+        var nameEl = document.createElement("div"); nameEl.className = "char-name"; nameEl.style.color = ch.color; nameEl.textContent = ch.icon + " " + ch.name;
+        info.appendChild(nameEl);
+        var descEl = document.createElement("div"); descEl.className = "char-desc"; descEl.textContent = ch.desc;
+        info.appendChild(descEl);
+        var statsWrap = document.createElement("div"); statsWrap.className = "char-stats";
+        var statKeys = Object.keys(ch.stats);
+        statKeys.forEach(function(sk) {
+            var statRow = document.createElement("div"); statRow.className = "char-stat";
+            var statLabel = document.createElement("span"); statLabel.className = "char-stat-label"; statLabel.textContent = ch.statLabels[sk];
+            var statBar = document.createElement("div"); statBar.className = "char-stat-bar";
+            var statFill = document.createElement("div"); statFill.className = "char-stat-fill";
+            var norm = 0.5;
+            if (sk === "hp") norm = ch.stats[sk] / 8;
+            else if (sk === "speed") norm = ch.stats[sk] / 1.5;
+            else if (sk === "xpMult") norm = ch.stats[sk] / 2;
+            else if (sk === "scoreMult") norm = ch.stats[sk] / 2;
+            else if (sk === "melee") norm = ch.stats[sk] / 2;
+            norm = Math.min(1, Math.max(0.1, norm));
+            statFill.style.width = (norm * 100) + "%";
+            statFill.style.background = ch.color;
+            statBar.appendChild(statFill);
+            var statVal = document.createElement("span"); statVal.className = "char-stat-val";
+            if (sk === "hp") statVal.textContent = ch.stats[sk];
+            else if (sk === "speed") statVal.textContent = ch.stats[sk].toFixed(1) + "x";
+            else if (sk === "xpMult") statVal.textContent = ch.stats[sk].toFixed(1) + "x";
+            else if (sk === "scoreMult") statVal.textContent = ch.stats[sk].toFixed(1) + "x";
+            else if (sk === "melee") statVal.textContent = ch.stats[sk].toFixed(1) + "x";
+            statRow.appendChild(statLabel); statRow.appendChild(statBar); statRow.appendChild(statVal);
+            statsWrap.appendChild(statRow);
+        });
+        info.appendChild(statsWrap);
+        var loreEl = document.createElement("div"); loreEl.className = "char-lore"; loreEl.textContent = ch.lore;
+        info.appendChild(loreEl);
+
+        card.appendChild(previewWrap); card.appendChild(info);
+        card.onclick = function() { charIdx = i; setupFocus = 1; _renderSetupUI(); };
+        card.onmouseenter = function() { if (i === charIdx && setupFocus === 1) return; _charNavTo(i); setupFocus = 1; };
+
+        charContainer.appendChild(card);
+    });
+
+    carouselWrap.appendChild(charContainer);
+
+    var arrowR = document.createElement("div"); arrowR.className = "char-nav-arrow char-nav-right"; arrowR.textContent = "\u25B6";
+    arrowR.onclick = function() { setupFocus = 1; _charNav(1); };
+    carouselWrap.appendChild(arrowR);
+
+    charSection.appendChild(carouselWrap);
+    MC.appendChild(charSection);
+
+    // ===== INIZIA PARTITA + INDIETRO =====
+    var btnRow = document.createElement("div"); btnRow.className = "setup-btn-row";
+
+    var backBtn = document.createElement("div"); backBtn.className = "btn setup-back-btn" + (setupFocus === 2 ? " selected" : "");
+    backBtn.textContent = "\u2190 Indietro"; backBtn.onclick = function() { mState = "slots"; showSlotMenu(); };
+    backBtn.onmouseenter = function() { if (setupFocus === 2) return; setupFocus = 2; _renderSetupUI(); };
+    btnRow.appendChild(backBtn);
+
+    var startBtn = document.createElement("div"); startBtn.className = "btn setup-start-btn" + (setupFocus === 3 ? " selected" : "");
+    startBtn.textContent = "\uD83C\uDFAE INIZIA PARTITA"; startBtn.onclick = function() { confirmSetup(); };
+    startBtn.onmouseenter = function() { if (setupFocus === 3) return; setupFocus = 3; _renderSetupUI(); };
+    btnRow.appendChild(startBtn);
+
+    MC.appendChild(btnRow);
+
+    // Centra la card selezionata
+    requestAnimationFrame(function() {
+        var selCard = charContainer.querySelector(".char-card.selected");
+        if (selCard) {
+            var scrollPos = selCard.offsetLeft - (charContainer.offsetWidth / 2) + (selCard.offsetWidth / 2);
+            charContainer.scrollLeft = scrollPos;
+        }
+    });
 }
 
-function renderDifficultyScreen() {
-    _renderDiffUI();
+function renderSetupScreen() {
+    _renderSetupUI();
 }
 
 function initZone() {
@@ -442,7 +544,7 @@ function renderRelList() {
 }
 
 function pauseGame() {
-    if (mState === "slots" || mState === "dead" || mState === "codex" || mState === "settings" || mState === "difficulty" || mState === "character") return;
+    if (mState === "slots" || mState === "dead" || mState === "codex" || mState === "settings" || mState === "setup") return;
     if (mState === "leveling" || relicDelay > 0 || cdTimer > 0) return;
     if (!running) return;
     paused = true; clearInterval(loop); mState = "paused"; mIdx = 0;
@@ -764,6 +866,7 @@ function showSlotMenu() {
 function renderSlots() {
     var MC = document.getElementById("menu-content");
     MC.textContent = "";
+    MC.classList.remove("setup-mode");
     var h1 = document.createElement("h1"); h1.textContent = "\uD83D\uDC0D SNAKE ROGUELITE"; MC.appendChild(h1);
     // Slots container: horizontal layout
     var slotsWrap = document.createElement("div"); slotsWrap.className = "slots-grid";
@@ -789,7 +892,7 @@ function renderSlots() {
             if (existingData && typeof existingData.snake !== "undefined" && typeof existingData.hp === "number" && existingData.hp > 0) {
                 startSlot(s);
             } else {
-                showDifficultyScreen(s);
+                showSetupScreen(s);
             }
         };
         btn.onmouseenter = function() {
@@ -858,7 +961,7 @@ function handleSlotConfirm() {
         if (existingData && typeof existingData.snake !== "undefined" && typeof existingData.hp === "number" && existingData.hp > 0) {
             startSlot(s);
         } else {
-            showDifficultyScreen(s);
+            showSetupScreen(s);
         }
     }
     else if (mIdx === 3) { showSettings(); }
@@ -869,18 +972,6 @@ function handlePauseConfirm() {
     if (mIdx === 0) { resumeGame(); }
     else if (mIdx === 1) { showSettings(); }
     else if (mIdx === 2) { abandonRun(); }
-}
-
-/* ===== CHARACTER SELECTION SCREEN ===== */
-function showCharacterScreen() {
-    mState = "character"; charIdx = 0;
-    if (codexFab) codexFab.style.display = "block";
-    _renderCharUI();
-}
-
-function confirmCharacter() {
-    selectedCharacter = CHARACTERS[charIdx].id;
-    startSlot(pendingSlot);
 }
 
 /* ===== Carousel navigation helper (no full re-render) ===== */
@@ -901,115 +992,6 @@ function _charNavTo(idx) {
 }
 function _charNav(dir) {
     _charNavTo((charIdx + dir + CHARACTERS.length) % CHARACTERS.length);
-}
-
-function _renderCharUI() {
-    var MC = document.getElementById("menu-content");
-    MC.textContent = "";
-    var h1 = document.createElement("h1"); h1.textContent = "\uD83C\uDFAE SELEZIONA PERSONAGGIO"; MC.appendChild(h1);
-    var sub = document.createElement("p"); sub.className = "sub"; sub.textContent = "\uD83C\uDF3F GIARDINO #" + pendingSlot; MC.appendChild(sub);
-
-    // Carousel wrapper con frecce laterali
-    var carouselWrap = document.createElement("div"); carouselWrap.className = "char-carousel-wrap";
-
-    // Freccia sinistra
-    var arrowL = document.createElement("div"); arrowL.className = "char-nav-arrow char-nav-left"; arrowL.textContent = "\u25C0";
-    arrowL.onclick = function() { _charNav(-1); };
-    carouselWrap.appendChild(arrowL);
-
-    // Container scrollabile
-    var charContainer = document.createElement("div"); charContainer.className = "char-container";
-    charContainer.id = "char-scroll-container";
-
-    CHARACTERS.forEach(function(ch, i) {
-        var card = document.createElement("div");
-        card.className = "char-card" + (i === charIdx ? " selected" : "");
-        card.setAttribute("data-char-index", i);
-
-        // Sfondo GIF animata (se disponibile) in trasparenza dietro la card
-        if (ch.gif) {
-            var bgImg = document.createElement("img"); bgImg.src = ch.gif;
-            bgImg.className = "char-card-bg";
-            bgImg.draggable = false;
-            card.appendChild(bgImg);
-        }
-
-        // Preview: canvas per tutti i personaggi
-        var previewWrap = document.createElement("div"); previewWrap.className = "char-preview";
-        var canvas = document.createElement("canvas"); canvas.width = 120; canvas.height = 120; canvas.className = "char-canvas";
-        previewWrap.appendChild(canvas);
-        _drawSnakePreview(canvas, ch);
-
-        var info = document.createElement("div"); info.className = "char-info";
-        var nameEl = document.createElement("div"); nameEl.className = "char-name"; nameEl.style.color = ch.color; nameEl.textContent = ch.icon + " " + ch.name;
-        info.appendChild(nameEl);
-        var descEl = document.createElement("div"); descEl.className = "char-desc"; descEl.textContent = ch.desc;
-        info.appendChild(descEl);
-        // Stats
-        var statsWrap = document.createElement("div"); statsWrap.className = "char-stats";
-        var statKeys = Object.keys(ch.stats);
-        statKeys.forEach(function(sk) {
-            var statRow = document.createElement("div"); statRow.className = "char-stat";
-            var statLabel = document.createElement("span"); statLabel.className = "char-stat-label"; statLabel.textContent = ch.statLabels[sk];
-            var statBar = document.createElement("div"); statBar.className = "char-stat-bar";
-            var statFill = document.createElement("div"); statFill.className = "char-stat-fill";
-            var norm = 0.5;
-            if (sk === "hp") norm = ch.stats[sk] / 8;
-            else if (sk === "speed") norm = ch.stats[sk] / 1.5;
-            else if (sk === "xpMult") norm = ch.stats[sk] / 2;
-            else if (sk === "scoreMult") norm = ch.stats[sk] / 2;
-            else if (sk === "melee") norm = ch.stats[sk] / 2;
-            norm = Math.min(1, Math.max(0.1, norm));
-            statFill.style.width = (norm * 100) + "%";
-            statFill.style.background = ch.color;
-            statBar.appendChild(statFill);
-            var statVal = document.createElement("span"); statVal.className = "char-stat-val";
-            if (sk === "hp") statVal.textContent = ch.stats[sk];
-            else if (sk === "speed") statVal.textContent = ch.stats[sk].toFixed(1) + "x";
-            else if (sk === "xpMult") statVal.textContent = ch.stats[sk].toFixed(1) + "x";
-            else if (sk === "scoreMult") statVal.textContent = ch.stats[sk].toFixed(1) + "x";
-            else if (sk === "melee") statVal.textContent = ch.stats[sk].toFixed(1) + "x";
-            statRow.appendChild(statLabel); statRow.appendChild(statBar); statRow.appendChild(statVal);
-            statsWrap.appendChild(statRow);
-        });
-        info.appendChild(statsWrap);
-        // Lore
-        var loreEl = document.createElement("div"); loreEl.className = "char-lore"; loreEl.textContent = ch.lore;
-        info.appendChild(loreEl);
-
-        card.appendChild(previewWrap); card.appendChild(info);
-        card.onclick = function() { charIdx = i; confirmCharacter(); };
-        card.onmouseenter = function() { _charNavTo(i); };
-
-        charContainer.appendChild(card);
-    });
-
-    carouselWrap.appendChild(charContainer);
-
-    // Freccia destra
-    var arrowR = document.createElement("div"); arrowR.className = "char-nav-arrow char-nav-right"; arrowR.textContent = "\u25B6";
-    arrowR.onclick = function() { _charNav(1); };
-    carouselWrap.appendChild(arrowR);
-
-    MC.appendChild(carouselWrap);
-
-    // Pulsante INDIETRO (stile uguale al menù difficoltà)
-    var backBtn = document.createElement("div"); backBtn.className = "btn slot-btn"; backBtn.style.cssText = "margin-top:14px;width:200px;opacity:.6";
-    backBtn.textContent = "\u2190 INDIETRO"; backBtn.onclick = function() { mState = "difficulty"; showDifficultyScreen(pendingSlot); };
-    MC.appendChild(backBtn);
-
-    // Centra la card selezionata senza scroll-snap (scroll programmatico)
-    requestAnimationFrame(function() {
-        var selCard = charContainer.querySelector(".char-card.selected");
-        if (selCard) {
-            var scrollPos = selCard.offsetLeft - (charContainer.offsetWidth / 2) + (selCard.offsetWidth / 2);
-            charContainer.scrollLeft = scrollPos;
-        }
-    });
-}
-
-function renderCharacterScreen() {
-    _renderCharUI();
 }
 
 function _drawSnakePreview(canvas, ch) {
@@ -1290,7 +1272,6 @@ function renderControllerSettings(container) {
 function exitSettings() {
     // Nascondi menu-screen se si torna alla pausa (il gioco usa l'overlay)
     if (settingsPrevState === "paused") { var ms = document.getElementById("menu-screen"); if (ms) ms.classList.remove("visible"); mState = "paused"; pauseGame(); }
-    else if (settingsPrevState === "difficulty") { mState = "difficulty"; showDifficultyScreen(pendingSlot); }
-    else if (settingsPrevState === "character") { mState = "character"; showCharacterScreen(); }
+    else if (settingsPrevState === "setup") { mState = "setup"; showSetupScreen(pendingSlot); }
     else { mState = "slots"; showSlotMenu(); }
 }

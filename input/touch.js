@@ -96,13 +96,26 @@ function createMobileControls() {
                     renderSlots();
                 }
             }
-            if (mState === "difficulty") {
-                if (dir === "up") { diffIdx = Math.max(0, diffIdx - 1); renderDifficultyScreen(); }
-                if (dir === "down") { diffIdx = Math.min(DIFF_TOTAL - 1, diffIdx + 1); renderDifficultyScreen(); }
-            }
-            if (mState === "character") {
-                if (dir === "left") _charNav(-1);
-                if (dir === "right") _charNav(1);
+            if (mState === "setup") {
+                if (dir === "up") {
+                    if (setupFocus >= 2) setupFocus = 1;
+                    else setupFocus = Math.max(0, setupFocus - 1);
+                    renderSetupScreen();
+                }
+                if (dir === "down") {
+                    if (setupFocus <= 1) setupFocus = 3;
+                    renderSetupScreen();
+                }
+                if (setupFocus === 0) {
+                    if (dir === "left") { diffIdx = (diffIdx - 1 + DIFFICULTIES.length) % DIFFICULTIES.length; renderSetupScreen(); }
+                    if (dir === "right") { diffIdx = (diffIdx + 1) % DIFFICULTIES.length; renderSetupScreen(); }
+                } else if (setupFocus === 1) {
+                    if (dir === "left") _charNav(-1);
+                    if (dir === "right") _charNav(1);
+                } else if (setupFocus === 2 || setupFocus === 3) {
+                    if (dir === "left") { setupFocus = 2; renderSetupScreen(); }
+                    if (dir === "right") { setupFocus = 3; renderSetupScreen(); }
+                }
             }
             if (mState === "leveling" && !relicInputLocked) {
                 if (dir === "left") { mIdx = (mIdx + picks.length - 1) % picks.length; renderRelics(); }
@@ -182,7 +195,7 @@ function createMobileControls() {
         e.preventDefault();
         e.stopPropagation();
         pauseTouchBtn.classList.add("mc-active");
-        if (mState === "slots" || mState === "dead" || mState === "codex" || mState === "difficulty" || mState === "character") return;
+        if (mState === "slots" || mState === "dead" || mState === "codex" || mState === "setup") return;
         if (mState === "leveling" || relicDelay > 0 || cdTimer > 0) return;
         if (running) { paused ? resumeGame() : pauseGame(); }
     }, { passive: false });
@@ -239,7 +252,7 @@ var charSwipeStartY = 0;
 
 document.addEventListener("touchstart", function(e) {
     // Character carousel swipe detection
-    if (mState === "character") {
+    if (mState === "setup") {
         var t = e.touches[0];
         charSwipeStartX = t.clientX;
         charSwipeStartY = t.clientY;
@@ -247,7 +260,7 @@ document.addEventListener("touchstart", function(e) {
 }, { passive: true });
 
 document.addEventListener("touchend", function(e) {
-    if (mState !== "character") return;
+    if (mState !== "setup") return;
     var t = e.changedTouches[0];
     var dx = t.clientX - charSwipeStartX;
     var dy = t.clientY - charSwipeStartY;

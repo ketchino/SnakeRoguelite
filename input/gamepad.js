@@ -232,20 +232,34 @@ function simulateKey(key) {
         if (k === "escape" || k === "back") { exitSettings(); }
         return;
     }
-    // Difficulty selection
-    if (mState === "difficulty") {
-        if (k === "arrowup") { diffIdx = Math.max(0, diffIdx - 1); renderDifficultyScreen(); }
-        if (k === "arrowdown") { diffIdx = Math.min(DIFF_TOTAL - 1, diffIdx + 1); renderDifficultyScreen(); }
-        if (k === "enter") { confirmDifficulty(); }
+    // Setup screen navigation — difficulty + character combined
+    // setupFocus: 0=difficoltà, 1=personaggio, 2=Indietro, 3=INIZIA PARTITA
+    if (mState === "setup") {
+        if (k === "arrowup") {
+            if (setupFocus >= 2) setupFocus = 1;
+            else setupFocus = Math.max(0, setupFocus - 1);
+            renderSetupScreen();
+        }
+        if (k === "arrowdown") {
+            if (setupFocus <= 1) setupFocus = 3;
+            renderSetupScreen();
+        }
+        if (setupFocus === 0) {
+            if (k === "arrowleft") { diffIdx = (diffIdx - 1 + DIFFICULTIES.length) % DIFFICULTIES.length; renderSetupScreen(); }
+            if (k === "arrowright") { diffIdx = (diffIdx + 1) % DIFFICULTIES.length; renderSetupScreen(); }
+        } else if (setupFocus === 1) {
+            if (k === "arrowleft") { _charNav(-1); }
+            if (k === "arrowright") { _charNav(1); }
+        } else if (setupFocus === 2 || setupFocus === 3) {
+            if (k === "arrowleft") { setupFocus = 2; renderSetupScreen(); }
+            if (k === "arrowright") { setupFocus = 3; renderSetupScreen(); }
+        }
+        if (k === "enter") {
+            if (setupFocus === 3) { confirmSetup(); }
+            else if (setupFocus === 2) { mState = "slots"; showSlotMenu(); }
+            else if (setupFocus === 0) { selectedDifficulty = DIFFICULTIES[diffIdx].id; renderSetupScreen(); }
+        }
         if (k === "escape" || k === "back") { mState = "slots"; showSlotMenu(); }
-        return;
-    }
-    // Character selection — orizzontale come la tastiera (A/D = left/right)
-    if (mState === "character") {
-        if (k === "arrowleft") { _charNav(-1); }
-        if (k === "arrowright") { _charNav(1); }
-        if (k === "enter") { confirmCharacter(); }
-        if (k === "escape" || k === "back") { mState = "difficulty"; showDifficultyScreen(pendingSlot); }
         return;
     }
     // Secret shop navigation — PRIORITÀ ALTA, prima del game input
@@ -306,8 +320,7 @@ function simulateKey(key) {
         if (mState === "slots") return;
         if (mState === "leveling") return;
         if (mState === "paused") { resumeGame(); return; }
-        if (mState === "character") { mState = "difficulty"; showDifficultyScreen(pendingSlot); return; }
-        if (mState === "difficulty") { mState = "slots"; showSlotMenu(); return; }
+        if (mState === "setup") { mState = "slots"; showSlotMenu(); return; }
         if (mState === "settings") { exitSettings(); return; }
         if (mState === "secretshop") { closeSecretShop(false); return; }
         if (running && !paused && relicDelay <= 0 && cdTimer <= 0) { pauseGame(); return; }

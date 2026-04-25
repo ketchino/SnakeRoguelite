@@ -56,7 +56,7 @@ function closeCodex() {
     document.body.classList.remove('codex-open');
     if (codexPanel) codexPanel.classList.remove('open');
     // Show FAB in appropriate states (including difficulty and character screens)
-    if (codexFab && (mState === "slots" || mState === "paused" || mState === "difficulty" || mState === "character")) {
+    if (codexFab && (mState === "slots" || mState === "paused" || mState === "setup")) {
         codexFab.style.display = "block";
     } else {
         codexFab.style.display = "none";

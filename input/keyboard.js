@@ -88,21 +88,40 @@ document.addEventListener("keydown", function (e) {
         if (k === "escape" || k === "backspace") { e.preventDefault(); exitSettings(); }
         return;
     }
-    // Difficulty selection navigation — PRIORITÀ ALTA, prima del game input
-    // diffIdx: 0=Peaceful, 1=Default, 2=Hardcore, 3=Indietro
-    if (mState === "difficulty") {
-        if (k === "w" || k === "arrowup") { e.preventDefault(); diffIdx = Math.max(0, diffIdx - 1); renderDifficultyScreen(); }
-        if (k === "s" || k === "arrowdown") { e.preventDefault(); diffIdx = Math.min(DIFF_TOTAL - 1, diffIdx + 1); renderDifficultyScreen(); }
-        if (k === " " || k === "enter") { e.preventDefault(); confirmDifficulty(); }
+    // Setup screen navigation — difficulty + character combined
+    // setupFocus: 0=difficoltà, 1=personaggio, 2=Indietro, 3=INIZIA PARTITA
+    if (mState === "setup") {
+        if (k === "w" || k === "arrowup") {
+            e.preventDefault();
+            if (setupFocus >= 2) setupFocus = 1;
+            else setupFocus = Math.max(0, setupFocus - 1);
+            renderSetupScreen();
+        }
+        if (k === "s" || k === "arrowdown") {
+            e.preventDefault();
+            if (setupFocus <= 1) setupFocus = 3; // Default to INIZIA PARTITA when going down
+            renderSetupScreen();
+        }
+        if (setupFocus === 0) {
+            // Difficoltà: A/D per cambiare
+            if (k === "a" || k === "arrowleft") { e.preventDefault(); diffIdx = (diffIdx - 1 + DIFFICULTIES.length) % DIFFICULTIES.length; renderSetupScreen(); }
+            if (k === "d" || k === "arrowright") { e.preventDefault(); diffIdx = (diffIdx + 1) % DIFFICULTIES.length; renderSetupScreen(); }
+        } else if (setupFocus === 1) {
+            // Personaggio: A/D per carousel
+            if (k === "a" || k === "arrowleft") { e.preventDefault(); _charNav(-1); }
+            if (k === "d" || k === "arrowright") { e.preventDefault(); _charNav(1); }
+        } else if (setupFocus === 2 || setupFocus === 3) {
+            // Bottom row: A/D switch tra Indietro e Inizia
+            if (k === "a" || k === "arrowleft") { e.preventDefault(); setupFocus = 2; renderSetupScreen(); }
+            if (k === "d" || k === "arrowright") { e.preventDefault(); setupFocus = 3; renderSetupScreen(); }
+        }
+        if (k === " " || k === "enter") {
+            e.preventDefault();
+            if (setupFocus === 3) { confirmSetup(); }
+            else if (setupFocus === 2) { mState = "slots"; showSlotMenu(); }
+            else if (setupFocus === 0) { selectedDifficulty = DIFFICULTIES[diffIdx].id; renderSetupScreen(); }
+        }
         if (k === "escape" || k === "backspace") { e.preventDefault(); mState = "slots"; showSlotMenu(); }
-        return;
-    }
-    // Character selection navigation — carousel orizzontale con wrap-around
-    if (mState === "character") {
-        if (k === "a" || k === "arrowleft") { e.preventDefault(); _charNav(-1); }
-        if (k === "d" || k === "arrowright") { e.preventDefault(); _charNav(1); }
-        if (k === " " || k === "enter") { e.preventDefault(); confirmCharacter(); }
-        if (k === "escape" || k === "backspace") { e.preventDefault(); mState = "difficulty"; showDifficultyScreen(pendingSlot); }
         return;
     }
     // Secret shop navigation — PRIORITÀ ALTA, prima del game input
