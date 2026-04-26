@@ -1933,6 +1933,88 @@ body:not(.debug-open) #menu-screen { transition: filter 0.3s, transform 0.3s; }
     overflow: hidden;
     text-overflow: ellipsis;
 }
+.debug-boss-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    margin-bottom: 3px;
+    cursor: pointer;
+    transition: 0.15s;
+    background: rgba(255,255,255,0.02);
+    overflow: hidden;
+}
+.debug-boss-item:hover {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+.debug-boss-item .dbi-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+.debug-boss-item .dbi-info {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+.debug-boss-item .dbi-name {
+    font-family: var(--fd);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    display: inline;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.debug-boss-item .dbi-desc {
+    color: #555;
+    font-size: 8px;
+    display: block;
+    margin-top: 1px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.debug-boss-item .dbi-type {
+    font-size: 12px;
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+.boss-secret-tag {
+    font-size: 8px;
+    color: #f59e0b;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    background: rgba(245, 158, 11, 0.12);
+    padding: 1px 4px;
+    border-radius: 3px;
+    vertical-align: middle;
+    margin-left: 3px;
+}
+.debug-boss-zone-label {
+    font-size: 9px;
+    font-weight: 700;
+    color: #888;
+    letter-spacing: 0.5px;
+    padding: 6px 0 2px 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    margin-bottom: 3px;
+}
+.debug-boss-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-bottom: 6px;
+}
+.debug-boss-tabs .debug-relic-tab {
+    font-size: 9px;
+    padding: 3px 6px;
+}
+
 .debug-empty {
     padding: 8px;
     color: #555;

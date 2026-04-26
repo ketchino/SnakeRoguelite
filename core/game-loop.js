@@ -44,15 +44,31 @@ function takeDamage(G, z, obs, fx, cause) {
     if (G.hp <= 0) return;
     if (G.invincible > 0) return;
     G.deathCause = cause || "Danno sconosciuto";
-    // Scaglia della Draga: reduce damage once every 30 ticks
-    if (G.scagliadraga && G.scagliaCD <= 0) {
-        G.scagliaCD = 30;
-        if (fx && fx.addF) fx.addF(G.snake[0].x, G.snake[0].y, "SCAGLIA!", "#ef4444");
-        if (fx && fx.onScreenFlash) fx.onScreenFlash(4, "rgba(239,68,68,.2)");
-        // Reduce damage: skip one HP loss by returning early after removing the obstacle
+    // Il Nome: 20% chance to dodge boss damage
+    if (G.ilnome && (cause === "Attacco Boss" || cause === "Collisione Boss" || cause === "Mela Avvelenata" || cause === "Bruco" || cause === "Lingua Rospo" || cause === "Vuoto" || cause.indexOf("Boss") !== -1)) {
+        if (Math.random() < 0.2) {
+            if (fx && fx.addF) fx.addF(G.snake[0].x, G.snake[0].y, "IL NOME! SCHIVATO!", "#a78bfa");
+            return;
+        }
+    }
+    // Scaglie del Coccodrillo: negate area attack every 20 ticks
+    if (G.scagliecocco && G.scaglieCoccoCD <= 0 && (cause === "Attacco Boss" || cause === "Vuoto")) {
+        G.scaglieCoccoCD = 20;
+        if (fx && fx.addF) fx.addF(G.snake[0].x, G.snake[0].y, "SCAGLIE COCCO!", "#bef264");
         if (obs) G.obstacles = G.obstacles.filter(function (o) { return o !== obs; });
-        if (fx && fx.onUpdateHUD) fx.onUpdateHUD();
         return;
+    }
+    // Scaglia della Draga: subisce 1 danno in meno da ogni attacco dei boss (minimo 1 danno)
+    if (G.scagliadraga && cause && cause.indexOf("Boss") !== -1) {
+        // Boss damage reduced by 1 (minimum 1). Since all boss attacks currently deal 1 damage,
+        // the minimum kicks in, but the scaglie absorb the impact with a 40% chance to negate it entirely.
+        if (Math.random() < 0.4) {
+            if (fx && fx.addF) fx.addF(G.snake[0].x, G.snake[0].y, "SCAGLIA!", "#ef4444");
+            if (fx && fx.onScreenFlash) fx.onScreenFlash(4, "rgba(239,68,68,.2)");
+            if (obs) G.obstacles = G.obstacles.filter(function (o) { return o !== obs; });
+            if (fx && fx.onUpdateHUD) fx.onUpdateHUD();
+            return;
+        }
     }
     if (G.bigtop && G.bigtopTicks > 0) {
         if (fx && fx.addF) fx.addF(G.snake[0].x, G.snake[0].y, "BIG TOP!", "#fbbf24");
@@ -99,6 +115,17 @@ function takeDamage(G, z, obs, fx, cause) {
         if (fx && fx.sLink) fx.sLink();
         triggerSpawn(G, z, mL(G));
         if (fx && fx.onScreenFlash) fx.onScreenFlash(10, "rgba(251,191,36,.3)");
+        if (fx && fx.onUpdateHUD) fx.onUpdateHUD();
+        return;
+    }
+    // Piuma della Fenice: revive once with 3 HP and 5 segments
+    if (G.hp <= 0 && G.piumafenice && !G.feniceUsed) {
+        G.feniceUsed = true;
+        G.hp = 3;
+        triggerSpawn(G, z, 5);
+        if (fx && fx.addF) fx.addF(G.snake[0].x, G.snake[0].y, "FENICE! RINASCITA!", "#7c3aed");
+        if (fx && fx.onScreenFlash) fx.onScreenFlash(15, "rgba(124,58,237,.4)");
+        if (fx && fx.onShake) fx.onShake(15);
         if (fx && fx.onUpdateHUD) fx.onUpdateHUD();
         return;
     }
@@ -182,10 +209,11 @@ function guscioRay(G, nx, ny, dirX, dirY, z, fx) {
 
 function tick(G, z, fx) {
     if (G.nokiaSlow > 0) { G.nokiaSlow--; return; }
+    if (G.petrified > 0) { G.petrified--; return; } // Basilisco/Occhio petrification
     if (G.hulkCD > 0) G.hulkCD--;
     if (G.invincible > 0 && !G._debugGod) G.invincible--;
     if (G.bigtopTicks > 0) G.bigtopTicks--;
-    if (G.scagliadraga && G.scagliaCD > 0) G.scagliaCD--;
+    // Scaglia della Draga no longer uses cooldown - it's a passive reduction
     if (G.traps) {
         for (var i = G.traps.length - 1; i >= 0; i--) {
             G.traps[i].life--;
@@ -204,6 +232,8 @@ function tick(G, z, fx) {
     if (!G.preZoneSpawn && G.boss && !G.boss.defeated) tickBoss(G, z, fx);
     else if (!G.preZoneSpawn) moveEnemies(G, z, fx);
     if (G.hp <= 0) return;
+    // Signor Cervo quiz: snake is hidden, skip all snake movement/collision
+    if (G.boss && G.boss.id === "cervo" && G.boss.quizActive) return;
 
     var oldDir = { x: G.dir.x, y: G.dir.y };
     if (G.inputBuffer.length) G.dir = G.inputBuffer.shift();
@@ -258,7 +288,7 @@ function tick(G, z, fx) {
         }
 
         var spF = -1;
-        var bossCollectTypes = ["golden", "shadow", "fly", "coin", "crystal", "cosmic", "essence"];
+        var bossCollectTypes = ["golden", "shadow", "fly", "coin", "crystal", "cosmic", "essence", "apple", "quantum", "feather", "answer", "mudcrystal", "tooth", "luckycoin", "truthkey", "hotscale", "ash", "nebulafrag", "starfrag", "tear"];
         for (var sfi = 0; sfi < G.foods.length; sfi++) {
             if (G.foods[sfi].x === nx && G.foods[sfi].y === ny) {
                 // During spawning: skip only poison (just respawned, unfair to take poison damage immediately)
@@ -269,7 +299,7 @@ function tick(G, z, fx) {
         }
         if (spF >= 0) {
             var spEatenFood = G.foods[spF];
-            var spBossCollectTypes = ["golden", "shadow", "fly", "coin", "crystal", "cosmic", "essence"];
+            var spBossCollectTypes = ["golden", "shadow", "fly", "coin", "crystal", "cosmic", "essence", "apple", "quantum", "feather", "answer", "mudcrystal", "tooth", "luckycoin", "truthkey", "hotscale", "ash", "nebulafrag", "starfrag", "tear"];
             var spIsBossCollect = G.boss && !G.boss.defeated && spBossCollectTypes.indexOf(spEatenFood.type) !== -1;
             
             if (spIsBossCollect) {
@@ -383,7 +413,29 @@ function tick(G, z, fx) {
     }
 
     // Boss cell collision: il serpente può colpire il boss, subisce danno e il boss si sposta
-    if (G.boss && !G.boss.defeated && !G.isSpawning) {
+    // Special case: I Tre Bruchi (independent snakes that roam the map)
+    if (G.boss && !G.boss.defeated && G.boss.id === "bruchi" && !G.isSpawning) {
+        var brCells = bossCells(G.boss);
+        var brBlocked = false;
+        for (var brci = 0; brci < brCells.length; brci++) {
+            if (nx === brCells[brci].x && ny === brCells[brci].y) { brBlocked = true; break; }
+        }
+        if (brBlocked) {
+            // Il serpente colpisce un bruco: subisce danno ma può passare attraverso
+            if (G.invincible <= 0) {
+                if (G.ilnome && Math.random() < 0.2) {
+                    if (fx && fx.addF) fx.addF(nx, ny, "SCHIVATO!", "#a78bfa");
+                } else {
+                    takeDamage(G, z, null, fx, "Bruco");
+                    if (fx && fx.sBossDmgPlayer) fx.sBossDmgPlayer();
+                }
+            }
+            if (fx && fx.onShake) fx.onShake(3);
+            // Snake can move through caterpillars (they're small)
+        }
+    }
+    // No collision for non-physical bosses (Coccodrillo, Cervo, Entita)
+    if (G.boss && !G.boss.defeated && !G.boss.noPhysical && G.boss.id !== "bruchi" && !G.isSpawning) {
         var bcPre = bossCells(G.boss);
         var bossBlocked = false;
         for (var bcpi = 0; bcpi < bcPre.length; bcpi++) {
@@ -567,7 +619,7 @@ function tick(G, z, fx) {
     if (foodIdx >= 0) {
         var eatenFood = G.foods[foodIdx];
         // Boss collectible types
-        var bossCollectTypes = ["golden", "shadow", "fly", "coin", "crystal", "cosmic", "essence"];
+        var bossCollectTypes = ["golden", "shadow", "fly", "coin", "crystal", "cosmic", "essence", "apple", "quantum", "feather", "answer", "mudcrystal", "tooth", "luckycoin", "truthkey", "hotscale", "ash", "nebulafrag", "starfrag", "tear"];
         var isBossCollect = G.boss && !G.boss.defeated && bossCollectTypes.indexOf(eatenFood.type) !== -1;
         // Boss food handling
         if (isBossCollect) {
@@ -591,7 +643,22 @@ function tick(G, z, fx) {
                 G.boss.goldenCollected = 0;
                 // Boss takes damage - use boss color for visual feedback (not red like player damage)
                 var bossDmgColor = bossDef2.color || "#fbbf24";
-                if (fx && fx.addF) fx.addF(G.boss.anchorX, G.boss.anchorY, "BOSS -1 HP!", bossDmgColor);
+                // I Tre Bruchi special: kill one caterpillar when enough mele are collected
+                if (G.boss.id === "bruchi" && G.boss.caterpillars) {
+                    var killedCat = false;
+                    for (var kci = 0; kci < G.boss.caterpillars.length; kci++) {
+                        if (G.boss.caterpillars[kci].alive) {
+                            G.boss.caterpillars[kci].alive = false;
+                            G.boss.bruchiCount = Math.max(0, G.boss.bruchiCount - 1);
+                            var deadHead = G.boss.caterpillars[kci].segments[0];
+                            if (fx && fx.addF) fx.addF(deadHead.x, deadHead.y, "BRUCO ELIMINATO!", "#86efac");
+                            killedCat = true;
+                            break;
+                        }
+                    }
+                } else {
+                    if (fx && fx.addF) fx.addF(G.boss.anchorX, G.boss.anchorY, "BOSS -1 HP!", bossDmgColor);
+                }
                 if (fx && fx.onScreenFlash) fx.onScreenFlash(10, h2r(bossDmgColor, 0.35));
                 if (fx && fx.onShake) fx.onShake(12);
                 if (fx && fx.sBossHit) fx.sBossHit();
@@ -612,6 +679,16 @@ function tick(G, z, fx) {
                 if (G.pelleprimordiale) {
                     // Immune to boss poison!
                     if (fx && fx.addF) fx.addF(foodX, foodY, "IMMUNE!", "#4ade80");
+                    if (fx && fx.sEat) fx.sEat();
+                } else if (G.linguamimic && Math.random() < 0.15) {
+                    // Lingua del Mimic: 15% chance to convert poison to heal
+                    var maxHpMimic = Math.max(1, 4 + (G.hpMaxMod || 0));
+                    if (G.hp < maxHpMimic) {
+                        G.hp++;
+                        if (fx && fx.addF) fx.addF(foodX, foodY, "MIMIC! +1 HP!", "#4ade80");
+                    } else {
+                        if (fx && fx.addF) fx.addF(foodX, foodY, "MIMIC! NESSUN DANNO!", "#f59e0b");
+                    }
                     if (fx && fx.sEat) fx.sEat();
                 } else {
                     // Boss poison damage — use distinct sound
@@ -656,6 +733,20 @@ function tick(G, z, fx) {
                 G.coronaMeals = 0;
                 if (!G.hpLocked) { G.hp++; G.hpMaxMod = (G.hpMaxMod || 0) + 1; }
                 if (fx && fx.addF) fx.addF(foodX, foodY, G.hpLocked ? "HP BLOCCATO" : "+1 MAX HP!", "#fbbf24");
+            }
+        }
+        // Calzino del Leprecauno: every 15 meals, +1 HP
+        if (G.calzinolep) {
+            G.calzinoMeals = (G.calzinoMeals || 0) + 1;
+            if (G.calzinoMeals >= 15) {
+                G.calzinoMeals = 0;
+                var calzMaxHp = Math.max(1, 4 + (G.hpMaxMod || 0));
+                if (G.hp < calzMaxHp) {
+                    G.hp++;
+                    if (fx && fx.addF) fx.addF(foodX, foodY, "CALZINO! +1 HP!", "#4ade80");
+                } else {
+                    if (fx && fx.addF) fx.addF(foodX, foodY, "CALZINO! HP PIENO!", "#22c55e");
+                }
             }
         }
         // Lingua del Rospo: stun enemies near food
@@ -753,7 +844,8 @@ function tick(G, z, fx) {
     } // end if (foodIdx >= 0)
 
     // Boss collision check (safety fallback - boss moves onto snake)
-    if (G.boss && !G.boss.defeated) {
+    // Skip for non-physical bosses and bruchi (handled separately)
+    if (G.boss && !G.boss.defeated && !G.boss.noPhysical && G.boss.id !== "bruchi") {
         var bc = bossCells(G.boss);
         for (var bci = 0; bci < bc.length; bci++) {
             if (nx === bc[bci].x && ny === bc[bci].y) {

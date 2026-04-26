@@ -3,6 +3,7 @@ var debugIsOpen = false;
 var debugPanel = null;
 var debugKeysDown = {};
 var debugRelicTab = "comune"; // Tab selezionato per reliquie
+var debugBossTab = -1; // Tab selezionato per boss (-1 = tutte le zone)
 var _debugPausedMusic = false; // Traccia se la musica è stata messa in pausa dal debug
 var debugScrollPos = 0; // Preserva posizione scroll
 var debugSearchQuery = ""; // Barra di ricerca
@@ -300,6 +301,29 @@ function debugSetSearch(query) {
     if (input) { input.focus(); input.setSelectionRange(query.length, query.length); }
 }
 
+// Spawn un boss specifico dal debug
+function debugSpawnSpecificBoss(bossId) {
+    if (!G || !running) return;
+    if (G.boss && !G.boss.defeated) {
+        addF(G.snake[0].x, G.snake[0].y, "BOSS GIA' ATTIVO", "#888");
+        renderDebugPanel();
+        return;
+    }
+    var bd = BOSS_DB.find(function(b) { return b.id === bossId; });
+    if (!bd) {
+        addF(G.snake[0].x, G.snake[0].y, "BOSS NON TROVATO", "#888");
+        renderDebugPanel();
+        return;
+    }
+    closeDebug();
+    fx.onBossStart(bd);
+}
+
+function debugSetBossTab(zoneIdx) {
+    debugBossTab = zoneIdx;
+    renderDebugPanel();
+}
+
 // Helper: filtra reliquie per tab e ricerca
 function _debugFilteredRelics(onlyOwned) {
     var q = debugSearchQuery;
@@ -479,6 +503,64 @@ function renderDebugPanel() {
             ' + (azBtns || (debugActionBtn("killenemies", "\uD83D\uDC7E", "KILL NEMICI", "Rimuove tutti i nemici") + debugActionBtn("clearobs", "\uD83E\uDDF9", "PULISCI MURI", "Rimuove tutti gli ostacoli") + debugActionBtn("giveallrelics", "\uD83D\uDEE1\uFE0F", "TUTTE RELIQUIE", "Ottieni tutte le reliquie") + debugActionBtn("unlockcodex", "\uD83D\uDCDA", "SBLOCCA CODEX", "Scopri tutto il codex") + debugActionBtn("suicide", "\u2620\uFE0F", "SUICIDIO", "Game over immediato"))) + '\
         </div>';
     }
+
+    // SELEZIONA BOSS
+    var zoneBossLabels = { 0: "\uD83C\uDF4E ZONA 1", 1: "\uD83C\uDF32 ZONA 2", 2: "\uD83C\uDF3E ZONA 3", 3: "\uD83D\uDC51 ZONA 4", 4: "\uD83D\uDD25 ZONA 5", 5: "\uD83C\uDF0C ZONA 6", 6: "\uD83D\uDD35 ZONA 7" };
+    var bossListHtml = '';
+    var filteredBosses = BOSS_DB.filter(function(b) {
+        if (debugBossTab >= 0 && b.zoneIndex !== debugBossTab) return false;
+        if (q) {
+            var hay = (b.name + " " + b.desc + " " + b.icon + " " + b.id + " " + (b.bossType === 'secret' ? 'segreto secret' : 'normale')).toLowerCase();
+            if (hay.indexOf(q) === -1) return false;
+        }
+        return true;
+    });
+    // Raggruppa per zona se tab "tutte"
+    if (debugBossTab < 0) {
+        var bossByZone = {};
+        filteredBosses.forEach(function(b) {
+            if (!bossByZone[b.zoneIndex]) bossByZone[b.zoneIndex] = [];
+            bossByZone[b.zoneIndex].push(b);
+        });
+        Object.keys(bossByZone).sort().forEach(function(zi) {
+            bossListHtml += '<div class="debug-boss-zone-label">' + (zoneBossLabels[zi] || ('ZONA ' + (parseInt(zi)+1))) + '</div>';
+            bossByZone[zi].forEach(function(b) {
+                var isSecret = b.bossType === 'secret';
+                var tag = isSecret ? ' <span class="boss-secret-tag">SEGRETO</span>' : '';
+                var typeIcon = isSecret ? '\uD83D\uDD10' : '\u2694\uFE0F';
+                bossListHtml += '<div class="debug-boss-item" onclick="debugSpawnSpecificBoss(\'' + b.id + '\')">\
+                    <span class="dbi-icon">' + b.icon + '</span>\
+                    <div class="dbi-info"><span class="dbi-name">' + b.name + tag + '</span><span class="dbi-desc">' + b.desc + '</span></div>\
+                    <span class="dbi-type">' + typeIcon + '</span>\
+                </div>';
+            });
+        });
+    } else {
+        filteredBosses.forEach(function(b) {
+            var isSecret = b.bossType === 'secret';
+            var tag = isSecret ? ' <span class="boss-secret-tag">SEGRETO</span>' : '';
+            var typeIcon = isSecret ? '\uD83D\uDD10' : '\u2694\uFE0F';
+            bossListHtml += '<div class="debug-boss-item" onclick="debugSpawnSpecificBoss(\'' + b.id + '\')">\
+                <span class="dbi-icon">' + b.icon + '</span>\
+                <div class="dbi-info"><span class="dbi-name">' + b.name + tag + '</span><span class="dbi-desc">' + b.desc + '</span></div>\
+                <span class="dbi-type">' + typeIcon + '</span>\
+            </div>';
+        });
+    }
+    if (!filteredBosses.length) bossListHtml = '<div class="debug-empty">Nessun boss trovato</div>';
+
+    sections += '<div class="debug-section">\
+        <div class="debug-section-title">\uD83E\uDD85 SELEZIONA BOSS</div>\
+        <div class="debug-boss-tabs">\
+            <div class="debug-relic-tab' + (debugBossTab === -1 ? ' active' : '') + '" onclick="debugSetBossTab(-1)">TUTTI</div>\
+            ' + Object.keys(zoneBossLabels).map(function(zi) {
+                return '<div class="debug-relic-tab' + (debugBossTab === parseInt(zi) ? ' active' : '') + '" onclick="debugSetBossTab(' + zi + ')">' + zoneBossLabels[zi] + '</div>';
+            }).join('') + '\
+        </div>\
+        <div class="debug-relic-list">\
+            ' + bossListHtml + '\
+        </div>\
+    </div>';
 
     // RELIQUIE
     sections += '<div class="debug-section">\

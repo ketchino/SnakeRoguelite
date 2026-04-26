@@ -1,5 +1,9 @@
 /* ===== RENDERING CANVAS ===== */
 
+// Pre-load Signor Cervo quiz background
+var _cervoBgImg = new Image();
+_cervoBgImg.src = "signor-cervo-bg.png";
+
 if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D.prototype.roundRect) {
     CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, radii) {
         var r = typeof radii === 'number' ? radii : (Array.isArray(radii) ? radii[0] : 0);
@@ -130,6 +134,9 @@ function draw() {
             var bPulse = Math.sin(now / 250) * 0.12 + 0.88;
             var bCol = bossDefR.color;
             var bRgb = hRGB(bCol);
+            // Skip default body rendering for bruchi (they're independent entities rendered separately)
+            var isBruchi = G.boss.id === "bruchi";
+            if (!isBruchi && !G.boss.noPhysical) {
             // Glow
             ctx.save(); ctx.shadowColor = bCol; ctx.shadowBlur = 20 * bPulse;
             ctx.fillStyle = "rgba(" + bRgb.r + "," + bRgb.g + "," + bRgb.b + ",0.25)"; ctx.beginPath(); ctx.roundRect(bx + 2, by + 2, CS * 2 - 4, CS * 2 - 4, 8); ctx.fill();
@@ -137,6 +144,7 @@ function draw() {
             // Body
             ctx.fillStyle = "rgba(" + bRgb.r + "," + bRgb.g + "," + bRgb.b + ",0.45)"; ctx.beginPath(); ctx.roundRect(bx + 3, by + 3, CS * 2 - 6, CS * 2 - 6, 7); ctx.fill();
             ctx.strokeStyle = "rgba(" + bRgb.r + "," + bRgb.g + "," + bRgb.b + ",0.8)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(bx + 3, by + 3, CS * 2 - 6, CS * 2 - 6, 7); ctx.stroke();
+            }
             // Boss-specific drawing
             var bcx = bx + CS, bcy = by + CS + 4;
             ctx.save();
@@ -303,6 +311,371 @@ function draw() {
                     ctx.fillStyle = "#fbbf24"; ctx.font = "bold 8px sans-serif"; ctx.textAlign = "center";
                     ctx.fillText(pPhase === 3 ? "💀" : "⚡", bcx, by - 2);
                 }
+            } else if (bid === "bruchi") {
+                // I Tre Bruchi: 3 independent small snakes roaming the map
+                // Rendered at their actual positions on the grid (not at boss anchor)
+                if (G.boss.caterpillars) {
+                    G.boss.caterpillars.forEach(function(cat, catIdx) {
+                        if (!cat.alive) return;
+                        var catColors = ["#65a30d", "#4ade80", "#86efac"];
+                        var catCol = catColors[catIdx % 3];
+                        // Draw each segment as a rounded cell
+                        cat.segments.forEach(function(seg, segIdx) {
+                            var segX = seg.x * CS;
+                            var segY = seg.y * CS;
+                            var isHead = segIdx === 0;
+                            // Body segment
+                            ctx.fillStyle = catCol;
+                            ctx.beginPath(); ctx.roundRect(segX + 2, segY + 2, CS - 4, CS - 4, isHead ? 6 : 4); ctx.fill();
+                            // Border
+                            ctx.strokeStyle = "#166534";
+                            ctx.lineWidth = 1;
+                            ctx.beginPath(); ctx.roundRect(segX + 2, segY + 2, CS - 4, CS - 4, isHead ? 6 : 4); ctx.stroke();
+                            // Head: draw eyes
+                            if (isHead) {
+                                var eyeOx = cat.dir.x * 3;
+                                var eyeOy = cat.dir.y * 3;
+                                var perpX = -cat.dir.y;
+                                var perpY = cat.dir.x;
+                                // Eyes
+                                ctx.fillStyle = "#111";
+                                ctx.beginPath(); ctx.arc(segX + HC + eyeOx + perpX * 2.5, segY + HC + eyeOy + perpY * 2.5, 1.5, 0, Math.PI * 2); ctx.fill();
+                                ctx.beginPath(); ctx.arc(segX + HC + eyeOx - perpX * 2.5, segY + HC + eyeOy - perpY * 2.5, 1.5, 0, Math.PI * 2); ctx.fill();
+                                // Eye shine
+                                ctx.fillStyle = "#fff";
+                                ctx.beginPath(); ctx.arc(segX + HC + eyeOx + perpX * 2.5 + 0.5, segY + HC + eyeOy + perpY * 2.5 - 0.5, 0.6, 0, Math.PI * 2); ctx.fill();
+                                ctx.beginPath(); ctx.arc(segX + HC + eyeOx - perpX * 2.5 + 0.5, segY + HC + eyeOy - perpY * 2.5 - 0.5, 0.6, 0, Math.PI * 2); ctx.fill();
+                            }
+                        });
+                        // Glow around head
+                        var headSeg = cat.segments[0];
+                        ctx.save();
+                        ctx.shadowColor = catCol;
+                        ctx.shadowBlur = 8;
+                        ctx.fillStyle = "rgba(0,0,0,0)";
+                        ctx.beginPath(); ctx.arc(headSeg.x * CS + HC, headSeg.y * CS + HC, 6, 0, Math.PI * 2); ctx.fill();
+                        ctx.restore();
+                    });
+                }
+                // Skip the default boss body rendering for bruchi since they're independent entities
+            } else if (bid === "newton") {
+                // Isaac Newton: Golden floating figure with apple
+                // Body
+                ctx.fillStyle = "#92400e";
+                ctx.beginPath(); ctx.roundRect(bcx - 6, bcy - 2, 12, 12, 3); ctx.fill();
+                // Head
+                ctx.beginPath(); ctx.arc(bcx, bcy - 6, 5, 0, Math.PI * 2); ctx.fill();
+                // Wig
+                ctx.fillStyle = "#d4d4d8";
+                ctx.beginPath(); ctx.arc(bcx, bcy - 7, 6, Math.PI, 0); ctx.fill();
+                // Floating apple above head
+                var appleBob = Math.sin(now / 300) * 3;
+                ctx.fillStyle = "#ef4444";
+                ctx.beginPath(); ctx.arc(bcx, bcy - 18 + appleBob, 3.5, 0, Math.PI * 2); ctx.fill();
+                // Apple leaf
+                ctx.fillStyle = "#22c55e";
+                ctx.beginPath(); ctx.ellipse(bcx + 2, bcy - 21 + appleBob, 2, 1, 0.3, 0, Math.PI * 2); ctx.fill();
+                // Golden glow on body
+                ctx.fillStyle = "rgba(251,191,36,0.3)";
+                ctx.beginPath(); ctx.roundRect(bcx - 6, bcy - 2, 12, 12, 3); ctx.fill();
+            } else if (bid === "gufo") {
+                // Il Gufo: Brown owl with big yellow eyes
+                // Body
+                ctx.fillStyle = "#78350f";
+                ctx.beginPath(); ctx.ellipse(bcx, bcy + 3, 10, 8, 0, 0, Math.PI * 2); ctx.fill();
+                // Head
+                ctx.beginPath(); ctx.arc(bcx, bcy - 5, 7, 0, Math.PI * 2); ctx.fill();
+                // Ear tufts
+                ctx.beginPath(); ctx.moveTo(bcx - 5, bcy - 10); ctx.lineTo(bcx - 8, bcy - 17); ctx.lineTo(bcx - 1, bcy - 9); ctx.closePath(); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(bcx + 5, bcy - 10); ctx.lineTo(bcx + 8, bcy - 17); ctx.lineTo(bcx + 1, bcy - 9); ctx.closePath(); ctx.fill();
+                // Big yellow eyes
+                ctx.fillStyle = "#fbbf24";
+                ctx.beginPath(); ctx.arc(bcx - 3, bcy - 6, 3.5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(bcx + 3, bcy - 6, 3.5, 0, Math.PI * 2); ctx.fill();
+                // Pupils
+                ctx.fillStyle = "#111";
+                ctx.beginPath(); ctx.arc(bcx - 3, bcy - 6, 2, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(bcx + 3, bcy - 6, 2, 0, Math.PI * 2); ctx.fill();
+                // Small beak
+                ctx.fillStyle = "#f59e0b";
+                ctx.beginPath(); ctx.moveTo(bcx - 2, bcy - 3); ctx.lineTo(bcx, bcy); ctx.lineTo(bcx + 2, bcy - 3); ctx.closePath(); ctx.fill();
+                // Head rotation indicator (phase)
+                if (G.boss.phase >= 2) {
+                    ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.arc(bcx, bcy - 5, 9, 0, Math.PI * 2); ctx.stroke();
+                }
+            } else if (bid === "cervo") {
+                // Il Signor Cervo: Brown deer in suit
+                // Body (suit)
+                ctx.fillStyle = "#44403c";
+                ctx.beginPath(); ctx.roundRect(bcx - 7, bcy - 2, 14, 12, 3); ctx.fill();
+                // Deer head
+                ctx.fillStyle = "#92400e";
+                ctx.beginPath(); ctx.ellipse(bcx, bcy - 6, 6, 7, 0, 0, Math.PI * 2); ctx.fill();
+                // Antlers
+                ctx.strokeStyle = "#d4d4d8"; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(bcx - 4, bcy - 12); ctx.lineTo(bcx - 8, bcy - 20); ctx.moveTo(bcx - 6, bcy - 16); ctx.lineTo(bcx - 10, bcy - 18); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(bcx + 4, bcy - 12); ctx.lineTo(bcx + 8, bcy - 20); ctx.moveTo(bcx + 6, bcy - 16); ctx.lineTo(bcx + 10, bcy - 18); ctx.stroke();
+                // Eyes
+                ctx.fillStyle = "#fbbf24";
+                ctx.beginPath(); ctx.arc(bcx - 3, bcy - 7, 1.5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(bcx + 3, bcy - 7, 1.5, 0, Math.PI * 2); ctx.fill();
+                // Bow tie
+                ctx.fillStyle = "#dc2626";
+                ctx.beginPath(); ctx.moveTo(bcx, bcy - 1); ctx.lineTo(bcx - 4, bcy - 4); ctx.lineTo(bcx - 4, bcy + 2); ctx.closePath(); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(bcx, bcy - 1); ctx.lineTo(bcx + 4, bcy - 4); ctx.lineTo(bcx + 4, bcy + 2); ctx.closePath(); ctx.fill();
+            } else if (bid === "lumaca") {
+                // La Lumaca Colossale: Green snail with large spiral shell
+                // Shell (spiral)
+                ctx.fillStyle = "#a3e635";
+                ctx.beginPath(); ctx.arc(bcx + 2, bcy - 2, 10, 0, Math.PI * 2); ctx.fill();
+                // Shell spiral lines
+                ctx.strokeStyle = "#65a30d"; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.arc(bcx + 2, bcy - 2, 7, 0, Math.PI * 1.5); ctx.stroke();
+                ctx.beginPath(); ctx.arc(bcx + 2, bcy - 2, 4, Math.PI * 0.5, Math.PI * 2); ctx.stroke();
+                // Shell highlight
+                ctx.fillStyle = "rgba(255,255,255,0.2)";
+                ctx.beginPath(); ctx.arc(bcx + 5, bcy - 5, 3, 0, Math.PI * 2); ctx.fill();
+                // Slimy body
+                ctx.fillStyle = "#4ade80";
+                ctx.beginPath(); ctx.ellipse(bcx - 4, bcy + 6, 12, 5, 0, 0, Math.PI * 2); ctx.fill();
+                // Eye stalks
+                ctx.strokeStyle = "#4ade80"; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.moveTo(bcx - 6, bcy + 2); ctx.lineTo(bcx - 8, bcy - 5); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(bcx - 2, bcy + 2); ctx.lineTo(bcx, bcy - 5); ctx.stroke();
+                // Eyes on stalks
+                ctx.fillStyle = "#111";
+                ctx.beginPath(); ctx.arc(bcx - 8, bcy - 6, 1.5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(bcx, bcy - 6, 1.5, 0, Math.PI * 2); ctx.fill();
+                // Slime trail
+                ctx.fillStyle = "rgba(74,222,128,0.25)";
+                ctx.beginPath(); ctx.ellipse(bcx - 14, bcy + 8, 6, 3, 0, 0, Math.PI * 2); ctx.fill();
+            } else if (bid === "coccodrillo") {
+                // Il Coccodrillo: NO physical body, only faint red eyes on map
+                var coccPulse = Math.sin(now / 200) * 0.5 + 0.5;
+                ctx.fillStyle = "rgba(239,68,68," + (0.6 * coccPulse) + ")";
+                ctx.beginPath(); ctx.arc(bcx - 4, bcy - 2, 2.5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(bcx + 4, bcy - 2, 2.5, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "rgba(255,255,255," + (0.4 * coccPulse) + ")";
+                ctx.beginPath(); ctx.arc(bcx - 4, bcy - 2, 1, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(bcx + 4, bcy - 2, 1, 0, Math.PI * 2); ctx.fill();
+            } else if (bid === "leprecauno") {
+                // Il Leprecauno: Green leprechaun with top hat
+                // Body
+                ctx.fillStyle = "#166534";
+                ctx.beginPath(); ctx.roundRect(bcx - 5, bcy - 2, 10, 12, 3); ctx.fill();
+                // Head
+                ctx.fillStyle = "#fde68a";
+                ctx.beginPath(); ctx.arc(bcx, bcy - 6, 5, 0, Math.PI * 2); ctx.fill();
+                // Top hat
+                ctx.fillStyle = "#1c1917";
+                ctx.beginPath(); ctx.roundRect(bcx - 5, bcy - 17, 10, 9, 2); ctx.fill();
+                ctx.beginPath(); ctx.roundRect(bcx - 7, bcy - 10, 14, 3, 1); ctx.fill();
+                // Hat band (gold)
+                ctx.fillStyle = "#fbbf24";
+                ctx.fillRect(bcx - 5, bcy - 11, 10, 2);
+                // Eyes
+                ctx.fillStyle = "#166534";
+                ctx.beginPath(); ctx.arc(bcx - 2, bcy - 7, 1, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(bcx + 2, bcy - 7, 1, 0, Math.PI * 2); ctx.fill();
+                // Beard
+                ctx.fillStyle = "#f97316";
+                ctx.beginPath(); ctx.moveTo(bcx - 3, bcy - 4); ctx.lineTo(bcx, bcy + 1); ctx.lineTo(bcx + 3, bcy - 4); ctx.closePath(); ctx.fill();
+                // Gold buckle
+                ctx.fillStyle = "#fbbf24";
+                ctx.beginPath(); ctx.roundRect(bcx - 2, bcy + 2, 4, 4, 1); ctx.fill();
+            } else if (bid === "mimic") {
+                // Il Mimic: Brown treasure chest
+                var mimicOpen = G.boss.phase >= 2;
+                // Chest body
+                ctx.fillStyle = "#92400e";
+                ctx.beginPath(); ctx.roundRect(bcx - 10, bcy - 4, 20, 14, 3); ctx.fill();
+                // Chest lid
+                ctx.fillStyle = "#78350f";
+                if (mimicOpen) {
+                    ctx.beginPath(); ctx.roundRect(bcx - 10, bcy - 14, 20, 10, 3); ctx.fill();
+                    // Teeth inside
+                    ctx.fillStyle = "#fff";
+                    for (var mti = 0; mti < 4; mti++) {
+                        ctx.beginPath(); ctx.moveTo(bcx - 7 + mti * 5, bcy - 5); ctx.lineTo(bcx - 5 + mti * 5, bcy - 1); ctx.lineTo(bcx - 3 + mti * 5, bcy - 5); ctx.closePath(); ctx.fill();
+                    }
+                    // Evil eye inside
+                    ctx.fillStyle = "#ef4444";
+                    ctx.beginPath(); ctx.arc(bcx, bcy - 9, 2.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = "#111";
+                    ctx.beginPath(); ctx.arc(bcx, bcy - 9, 1.2, 0, Math.PI * 2); ctx.fill();
+                } else {
+                    ctx.beginPath(); ctx.roundRect(bcx - 10, bcy - 10, 20, 7, 3); ctx.fill();
+                }
+                // Chest lock/buckle
+                ctx.fillStyle = "#fbbf24";
+                ctx.beginPath(); ctx.roundRect(bcx - 2, bcy - 3, 4, 5, 1); ctx.fill();
+                // Metal bands
+                ctx.strokeStyle = "#d97706"; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(bcx - 10, bcy); ctx.lineTo(bcx + 10, bcy); ctx.stroke();
+            } else if (bid === "basilisco") {
+                // Il Basilisco di Lava: Red/orange lizard with glowing eyes and lava patterns
+                var basPulse = Math.sin(now / 150) * 0.3 + 0.7;
+                // Body
+                ctx.fillStyle = "#dc2626";
+                ctx.beginPath(); ctx.ellipse(bcx, bcy + 2, 11, 7, 0, 0, Math.PI * 2); ctx.fill();
+                // Head
+                ctx.fillStyle = "#ef4444";
+                ctx.beginPath(); ctx.ellipse(bcx, bcy - 6, 7, 5, 0, 0, Math.PI * 2); ctx.fill();
+                // Lava cracks on body
+                ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.moveTo(bcx - 5, bcy); ctx.lineTo(bcx - 2, bcy + 4); ctx.lineTo(bcx + 1, bcy + 1); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(bcx + 3, bcy - 1); ctx.lineTo(bcx + 6, bcy + 3); ctx.stroke();
+                // Glowing eyes
+                ctx.fillStyle = "#fbbf24";
+                ctx.beginPath(); ctx.arc(bcx - 3, bcy - 7, 2.5 * basPulse, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(bcx + 3, bcy - 7, 2.5 * basPulse, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "#fff";
+                ctx.beginPath(); ctx.arc(bcx - 3, bcy - 7, 1 * basPulse, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(bcx + 3, bcy - 7, 1 * basPulse, 0, Math.PI * 2); ctx.fill();
+                // Tail
+                ctx.strokeStyle = "#dc2626"; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(bcx, bcy + 8); ctx.quadraticCurveTo(bcx + 10, bcy + 14, bcx + 14, bcy + 8); ctx.stroke();
+                // Lava particles
+                ctx.fillStyle = "rgba(251,191,36," + (0.4 * basPulse) + ")";
+                ctx.beginPath(); ctx.arc(bcx - 7, bcy + 3, 2 * basPulse, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(bcx + 8, bcy + 5, 1.5 * basPulse, 0, Math.PI * 2); ctx.fill();
+            } else if (bid === "fenice") {
+                // La Fenice di Ossidiana: Purple phoenix with spread wings
+                var fenPhase2 = G.boss.phase >= 2;
+                var fenPulse = Math.sin(now / 200) * 0.2 + 0.8;
+                var fenCol = fenPhase2 ? "#7c3aed" : "#a855f7";
+                var fenCol2 = fenPhase2 ? "#5b21b6" : "#7c3aed";
+                // Wings (spread)
+                ctx.fillStyle = fenPhase2 ? "rgba(124,58,237,0.6)" : "rgba(168,85,247,0.4)";
+                ctx.beginPath(); ctx.moveTo(bcx - 5, bcy); ctx.quadraticCurveTo(bcx - 20, bcy - 12 - (fenPhase2 ? 4 : 0), bcx - 16, bcy + 6); ctx.lineTo(bcx - 4, bcy + 3); ctx.closePath(); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(bcx + 5, bcy); ctx.quadraticCurveTo(bcx + 20, bcy - 12 - (fenPhase2 ? 4 : 0), bcx + 16, bcy + 6); ctx.lineTo(bcx + 4, bcy + 3); ctx.closePath(); ctx.fill();
+                // Body
+                ctx.fillStyle = fenCol;
+                ctx.beginPath(); ctx.ellipse(bcx, bcy + 2, 7, 9, 0, 0, Math.PI * 2); ctx.fill();
+                // Head
+                ctx.fillStyle = fenCol2;
+                ctx.beginPath(); ctx.arc(bcx, bcy - 8, 5, 0, Math.PI * 2); ctx.fill();
+                // Eyes
+                ctx.fillStyle = "#fbbf24";
+                ctx.beginPath(); ctx.arc(bcx - 2, bcy - 9, 1.5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(bcx + 2, bcy - 9, 1.5, 0, Math.PI * 2); ctx.fill();
+                // Tail feathers
+                ctx.strokeStyle = fenCol; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(bcx - 2, bcy + 10); ctx.quadraticCurveTo(bcx - 6, bcy + 18, bcx - 10, bcy + 14); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(bcx + 2, bcy + 10); ctx.quadraticCurveTo(bcx + 6, bcy + 18, bcx + 10, bcy + 14); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(bcx, bcy + 10); ctx.quadraticCurveTo(bcx, bcy + 20, bcx, bcy + 16); ctx.stroke();
+                // Phase 2: obsidian cracks and ember particles
+                if (fenPhase2) {
+                    ctx.strokeStyle = "#1e1b4b"; ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.moveTo(bcx - 3, bcy - 2); ctx.lineTo(bcx - 1, bcy + 4); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(bcx + 2, bcy); ctx.lineTo(bcx + 4, bcy + 5); ctx.stroke();
+                    ctx.fillStyle = "rgba(251,191,36," + (0.6 * fenPulse) + ")";
+                    ctx.beginPath(); ctx.arc(bcx - 8, bcy - 4, 2 * fenPulse, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(bcx + 10, bcy + 2, 1.5 * fenPulse, 0, Math.PI * 2); ctx.fill();
+                }
+            } else if (bid === "nebula") {
+                // La Nebula Vivente: Light blue wispy cloud with sparkles
+                var nebPulse = Math.sin(now / 300) * 0.3 + 0.7;
+                // Main cloud body (wispy)
+                ctx.globalAlpha = 0.5 * nebPulse;
+                ctx.fillStyle = "#7dd3fc";
+                ctx.beginPath(); ctx.ellipse(bcx, bcy, 14, 10, 0, 0, Math.PI * 2); ctx.fill();
+                // Secondary wisps
+                ctx.fillStyle = "#bae6fd";
+                ctx.beginPath(); ctx.ellipse(bcx - 8, bcy - 4, 8, 6, -0.3, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(bcx + 8, bcy + 2, 7, 5, 0.4, 0, Math.PI * 2); ctx.fill();
+                ctx.globalAlpha = 1;
+                // Inner core
+                ctx.fillStyle = "#38bdf8";
+                ctx.globalAlpha = 0.6;
+                ctx.beginPath(); ctx.arc(bcx, bcy, 5, 0, Math.PI * 2); ctx.fill();
+                ctx.globalAlpha = 1;
+                // Sparkles
+                for (var nsi = 0; nsi < 5; nsi++) {
+                    var nsA = now / 400 + nsi * Math.PI * 2 / 5;
+                    var nsR = 10 + Math.sin(now / 500 + nsi) * 4;
+                    ctx.fillStyle = "rgba(255,255,255," + (0.6 * nebPulse) + ")";
+                    ctx.beginPath(); ctx.arc(bcx + Math.cos(nsA) * nsR, bcy + Math.sin(nsA) * nsR, 1.5, 0, Math.PI * 2); ctx.fill();
+                }
+                // Eye-like center
+                ctx.fillStyle = "#0ea5e9";
+                ctx.beginPath(); ctx.ellipse(bcx, bcy, 3, 2, 0, 0, Math.PI * 2); ctx.fill();
+            } else if (bid === "astro") {
+                // L'Astro Divoratore: Dark circle with golden corona
+                var astPulse = Math.sin(now / 180) * 0.3 + 0.7;
+                // Golden corona
+                ctx.fillStyle = "rgba(251,191,36," + (0.3 * astPulse) + ")";
+                ctx.beginPath(); ctx.arc(bcx, bcy, 16 * astPulse, 0, Math.PI * 2); ctx.fill();
+                // Corona rays
+                for (var ari = 0; ari < 8; ari++) {
+                    var arA = now / 800 + ari * Math.PI / 4;
+                    var arLen = 12 + Math.sin(now / 200 + ari) * 4;
+                    ctx.strokeStyle = "rgba(251,191,36," + (0.5 * astPulse) + ")";
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.moveTo(bcx + Math.cos(arA) * 10, bcy + Math.sin(arA) * 10); ctx.lineTo(bcx + Math.cos(arA) * arLen, bcy + Math.sin(arA) * arLen); ctx.stroke();
+                }
+                // Dark center (black hole)
+                ctx.fillStyle = "#0a0a0a";
+                ctx.beginPath(); ctx.arc(bcx, bcy, 8, 0, Math.PI * 2); ctx.fill();
+                // Event horizon ring
+                ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.arc(bcx, bcy, 9, 0, Math.PI * 2); ctx.stroke();
+                // Inner distortion
+                ctx.fillStyle = "rgba(251,191,36,0.15)";
+                ctx.beginPath(); ctx.arc(bcx, bcy, 5, 0, Math.PI * 2); ctx.fill();
+            } else if (bid === "occhio") {
+                // L'Occhio dell'Abisso: Indigo giant eye
+                var occPhase2 = G.boss.phase >= 2;
+                var occPulse = Math.sin(now / 200) * 0.2 + 0.8;
+                // Eye outline (almond shape)
+                ctx.fillStyle = "#312e81";
+                ctx.beginPath(); ctx.ellipse(bcx, bcy, 14, 9, 0, 0, Math.PI * 2); ctx.fill();
+                // Sclera
+                ctx.fillStyle = "#e0e7ff";
+                ctx.beginPath(); ctx.ellipse(bcx, bcy, 12, 7, 0, 0, Math.PI * 2); ctx.fill();
+                // Iris
+                ctx.fillStyle = occPhase2 ? "#dc2626" : "#4f46e5";
+                ctx.beginPath(); ctx.arc(bcx, bcy, 5 * occPulse, 0, Math.PI * 2); ctx.fill();
+                // Pupil
+                ctx.fillStyle = "#111";
+                ctx.beginPath(); ctx.arc(bcx, bcy, 2.5, 0, Math.PI * 2); ctx.fill();
+                // Light reflection
+                ctx.fillStyle = "rgba(255,255,255,0.7)";
+                ctx.beginPath(); ctx.arc(bcx - 2, bcy - 2, 1.5, 0, Math.PI * 2); ctx.fill();
+                // Phase 2: clone indicators (small eyes around)
+                if (occPhase2) {
+                    for (var oci = 0; oci < 3; oci++) {
+                        var occA = now / 500 + oci * Math.PI * 2 / 3;
+                        var occR = 12;
+                        var occX2 = bcx + Math.cos(occA) * occR;
+                        var occY2 = bcy + Math.sin(occA) * occR;
+                        ctx.fillStyle = "rgba(79,70,229,0.5)";
+                        ctx.beginPath(); ctx.ellipse(occX2, occY2, 4, 2.5, occA, 0, Math.PI * 2); ctx.fill();
+                        ctx.fillStyle = "#dc2626";
+                        ctx.beginPath(); ctx.arc(occX2, occY2, 1.5, 0, Math.PI * 2); ctx.fill();
+                    }
+                }
+                // Veins
+                ctx.strokeStyle = "rgba(239,68,68,0.3)"; ctx.lineWidth = 0.5;
+                ctx.beginPath(); ctx.moveTo(bcx - 8, bcy - 1); ctx.quadraticCurveTo(bcx - 10, bcy - 4, bcx - 12, bcy - 3); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(bcx + 8, bcy + 1); ctx.quadraticCurveTo(bcx + 10, bcy + 4, bcx + 12, bcy + 2); ctx.stroke();
+            } else if (bid === "entita") {
+                // L'Entita Senza Nome: NO physical form, just faint dark swirl
+                var entPulse = Math.sin(now / 400) * 0.3 + 0.5;
+                // Faint dark swirl
+                ctx.globalAlpha = 0.3 * entPulse;
+                ctx.strokeStyle = "#1e1b4b"; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(bcx, bcy, 10, 0, Math.PI * 1.2); ctx.stroke();
+                ctx.beginPath(); ctx.arc(bcx, bcy, 6, Math.PI * 0.5, Math.PI * 1.8); ctx.stroke();
+                ctx.globalAlpha = 1;
+                // Void particles
+                for (var eni = 0; eni < 4; eni++) {
+                    var enA = now / 600 + eni * Math.PI / 2;
+                    var enR = 8 + Math.sin(now / 300 + eni) * 3;
+                    ctx.fillStyle = "rgba(30,27,75," + (0.4 * entPulse) + ")";
+                    ctx.beginPath(); ctx.arc(bcx + Math.cos(enA) * enR, bcy + Math.sin(enA) * enR, 1.5, 0, Math.PI * 2); ctx.fill();
+                }
             }
             ctx.restore();
             // Boss-specific VFX after restore
@@ -438,6 +811,10 @@ function draw() {
                             ctx.lineWidth = 1.5;
                             ctx.beginPath(); ctx.moveTo(acX + HC, acY + 2); ctx.lineTo(acX + HC, acY + CS - 2); ctx.stroke();
                         }
+                    } else if (ac.type === "orbit") {
+                        ctx.shadowColor = "#86efac"; ctx.shadowBlur = isWarning ? 6 : 12;
+                        ctx.fillStyle = "rgba(134,239,172," + (0.4 * acPulse) + ")";
+                        ctx.beginPath(); ctx.arc(acX + HC, acY + HC, CS / 2 - 3, 0, Math.PI * 2); ctx.fill();
                     } else {
                         // Generic attack cell
                         ctx.shadowColor = ac.color || "#f87171"; ctx.shadowBlur = isWarning ? 6 : 12;
@@ -453,7 +830,18 @@ function draw() {
             if (G.boss.goldenCollected > 0) {
                 var ccColor = G.boss.collectColor || "#fbbf24";
                 ctx.fillStyle = ccColor; ctx.font = "bold 11px 'Chakra Petch',sans-serif";
-                ctx.fillText(G.boss.goldenCollected + "/" + bossDefR.goldenToDamage, bx + CS, by - 6);
+                // For bruchi, show counter above the first alive caterpillar's head
+                if (G.boss.id === "bruchi" && G.boss.caterpillars) {
+                    var firstAlive = null;
+                    for (var fai = 0; fai < G.boss.caterpillars.length; fai++) {
+                        if (G.boss.caterpillars[fai].alive) { firstAlive = G.boss.caterpillars[fai]; break; }
+                    }
+                    if (firstAlive) {
+                        ctx.fillText(G.boss.goldenCollected + "/" + bossDefR.goldenToDamage, firstAlive.segments[0].x * CS + HC, firstAlive.segments[0].y * CS - 6);
+                    }
+                } else {
+                    ctx.fillText(G.boss.goldenCollected + "/" + bossDefR.goldenToDamage, bx + CS, by - 6);
+                }
             }
         }
     }
@@ -498,7 +886,7 @@ function draw() {
     G.foods.forEach(function (f) {
         if (!f) return;
         var ffx = f.x * CS + HC, ffy = f.y * CS + HC;
-        var bossCollectTypes = ["golden", "shadow", "fly", "coin", "crystal", "cosmic", "essence"];
+        var bossCollectTypes = ["golden", "shadow", "fly", "coin", "crystal", "cosmic", "essence", "apple", "quantum", "feather", "answer", "mudcrystal", "tooth", "luckycoin", "truthkey", "hotscale", "ash", "nebulafrag", "starfrag", "tear"];
         if (bossCollectTypes.indexOf(f.type) !== -1) {
             var cType = f.type;
             var cColor = "#fbbf24", cInner = "#fef08a", cGlow = 18;
@@ -508,6 +896,19 @@ function draw() {
             else if (cType === "crystal") { cColor = "#f97316"; cInner = "#fed7aa"; cGlow = 20; }
             else if (cType === "cosmic") { cColor = "#a855f7"; cInner = "#e9d5ff"; cGlow = 16; }
             else if (cType === "essence") { cColor = "#fb7185"; cInner = "#fecdd3"; cGlow = 18; }
+            else if (cType === "apple") { cColor = "#4ade80"; cInner = "#bbf7d0"; cGlow = 14; }
+            else if (cType === "quantum") { cColor = "#fde047"; cInner = "#fef9c3"; cGlow = 20; }
+            else if (cType === "feather") { cColor = "#fbbf24"; cInner = "#fde68a"; cGlow = 14; }
+            else if (cType === "answer") { cColor = "#f59e0b"; cInner = "#fde68a"; cGlow = 16; }
+            else if (cType === "mudcrystal") { cColor = "#a3e635"; cInner = "#d9f99d"; cGlow = 14; }
+            else if (cType === "tooth") { cColor = "#bef264"; cInner = "#ecfccb"; cGlow = 12; }
+            else if (cType === "luckycoin") { cColor = "#4ade80"; cInner = "#bbf7d0"; cGlow = 16; }
+            else if (cType === "truthkey") { cColor = "#f59e0b"; cInner = "#fde68a"; cGlow = 16; }
+            else if (cType === "hotscale") { cColor = "#f97316"; cInner = "#fed7aa"; cGlow = 20; }
+            else if (cType === "ash") { cColor = "#a78bfa"; cInner = "#ddd6fe"; cGlow = 16; }
+            else if (cType === "nebulafrag") { cColor = "#38bdf8"; cInner = "#bae6fd"; cGlow = 16; }
+            else if (cType === "starfrag") { cColor = "#fde68a"; cInner = "#fefce8"; cGlow = 18; }
+            else if (cType === "tear") { cColor = "#818cf8"; cInner = "#c7d2fe"; cGlow = 16; }
             var gPulse = Math.sin(now / 120) * 0.2 + 0.8;
             ctx.save(); ctx.shadowColor = cColor; ctx.shadowBlur = cGlow * gPulse;
             ctx.fillStyle = cColor; ctx.beginPath(); ctx.arc(ffx, ffy, 9 * gPulse, 0, Math.PI * 2); ctx.fill();
@@ -612,10 +1013,16 @@ function draw() {
         if (f.life <= 0 && !debugFrozen) floats.splice(i, 1);
     }
     ctx.globalAlpha = 1; ctx.restore();
+
     var vg = ctx.createRadialGradient(C.width / 2, C.height / 2, C.width * 0.25, C.width / 2, C.height / 2, C.width * 0.7);
     vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.35)");
     ctx.fillStyle = vg; ctx.fillRect(0, 0, C.width, C.height);
     // Damage flash rimosso — si mantiene solo lo shake dello schermo
+
+    // ===== SIGNOR CERVO QUIZ OVERLAY (full-map, canvas-based) =====
+    if (G.boss && G.boss.id === "cervo" && G.boss.quizActive && G.boss.quizCurrent && !G.boss.defeated) {
+        _drawCervoQuiz(ctx, C, G, now);
+    }
 
     if (relicDelay > 0) {
         if (!debugFrozen) relicDelay -= dt * 1000;
@@ -651,6 +1058,247 @@ requestAnimationFrame(function rl(timestamp) {
     draw(); 
     requestAnimationFrame(rl); 
 });
+
+/* ===== SIGNOR CERVO CANVAS QUIZ RENDERING (FULL MAP + BG IMAGE) ===== */
+function _drawCervoQuiz(ctx, C, G, now) {
+    var boss = G.boss;
+    var q = boss.quizCurrent;
+    if (!q) return;
+
+    var cw = C.width, ch = C.height;
+
+    ctx.save();
+
+    // Draw background image using "cover" mode (fill canvas, maintain aspect ratio, crop excess)
+    if (_cervoBgImg.complete && _cervoBgImg.naturalWidth > 0) {
+        var imgW = _cervoBgImg.naturalWidth, imgH = _cervoBgImg.naturalHeight;
+        var imgAspect = imgW / imgH;
+        var canvasAspect = cw / ch;
+        var drawW, drawH, drawX, drawY;
+        if (imgAspect > canvasAspect) {
+            // Image is wider: fit height, crop sides
+            drawH = ch;
+            drawW = ch * imgAspect;
+            drawX = (cw - drawW) / 2;
+            drawY = 0;
+        } else {
+            // Image is taller: fit width, crop top/bottom
+            drawW = cw;
+            drawH = cw / imgAspect;
+            drawX = 0;
+            drawY = (ch - drawH) / 2;
+        }
+        ctx.drawImage(_cervoBgImg, drawX, drawY, drawW, drawH);
+        // Dark overlay on top of image for text readability
+        ctx.fillStyle = "rgba(10,5,0,0.7)";
+        ctx.fillRect(0, 0, cw, ch);
+    } else {
+        ctx.fillStyle = "rgba(10,5,0,0.94)";
+        ctx.fillRect(0, 0, cw, ch);
+    }
+
+    // Decorative border around entire canvas
+    var borderW = 4;
+    ctx.strokeStyle = "#a16207";
+    ctx.lineWidth = borderW;
+    ctx.strokeRect(borderW / 2, borderW / 2, cw - borderW, ch - borderW);
+
+    // Inner decorative border
+    ctx.strokeStyle = "rgba(161,98,7,0.4)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(12, 12, cw - 24, ch - 24);
+
+    // Corner ornaments
+    var ornSize = 20;
+    ctx.strokeStyle = "#fbbf24";
+    ctx.lineWidth = 2;
+    [[12,12],[cw-12,12],[12,ch-12],[cw-12,ch-12]].forEach(function(pt) {
+        var sx = pt[0], sy = pt[1];
+        ctx.beginPath();
+        ctx.moveTo(sx, sy + (sy < ch/2 ? ornSize : -ornSize));
+        ctx.lineTo(sx, sy);
+        ctx.lineTo(sx + (sx < cw/2 ? ornSize : -ornSize), sy);
+        ctx.stroke();
+    });
+
+    var cx = cw / 2;
+    var yOff = 24;
+
+    // Title: "Il Signor Cervo ti pone una domanda (X/5)"
+    ctx.font = "bold 15px 'Chakra Petch',sans-serif";
+    ctx.fillStyle = "#fbbf24";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText("Il Signor Cervo ti pone una domanda (" + (boss.quizQuestion + 1) + "/5)", cx, yOff);
+    yOff += 20;
+
+    // HP display — show current HP as hearts so player sees life loss immediately
+    var maxHpDisplay = G.maxHp || 5;
+    var hpStr = "";
+    for (var hi = 0; hi < maxHpDisplay; hi++) {
+        hpStr += hi < G.hp ? "\u2764 " : "\u2661 ";
+    }
+    ctx.font = "bold 14px 'Chakra Petch',sans-serif";
+    ctx.fillStyle = G.hp <= 1 ? "#ef4444" : "#f87171";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(hpStr.trim(), cx, yOff);
+    yOff += 20;
+
+    // Show last answer result prominently
+    if (boss.quizLastResult === "wrong") {
+        ctx.font = "bold 13px 'Chakra Petch',sans-serif";
+        ctx.fillStyle = "#ef4444";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText("-1 HP!", cx, yOff);
+        yOff += 16;
+    } else if (boss.quizLastResult === "correct" && boss.quizQuestion > 0) {
+        ctx.font = "bold 13px 'Chakra Petch',sans-serif";
+        ctx.fillStyle = "#4ade80";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText("Corretto!", cx, yOff);
+        yOff += 16;
+    }
+
+    // Timer bar — full width minus margins
+    var timerMax = boss.quizTimeLimit || 15;
+    var timerRemaining = boss.quizTimer || 0;
+    var timerFrac = Math.max(0, timerRemaining / timerMax);
+    var barMargin = 30;
+    var barW = cw - barMargin * 2;
+    var barH = 10;
+    var barX = barMargin;
+    var barY = yOff;
+
+    // Bar background
+    ctx.fillStyle = "rgba(161,98,7,0.3)";
+    ctx.beginPath();
+    ctx.roundRect(barX, barY, barW, barH, 5);
+    ctx.fill();
+
+    // Bar fill
+    var timerColor = timerFrac > 0.5 ? "#fbbf24" : timerFrac > 0.25 ? "#f97316" : "#ef4444";
+    ctx.fillStyle = timerColor;
+    ctx.beginPath();
+    ctx.roundRect(barX, barY, Math.max(0, barW * timerFrac), barH, 5);
+    ctx.fill();
+
+    // Timer text
+    ctx.font = "bold 12px 'Chakra Petch',sans-serif";
+    ctx.fillStyle = timerColor;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(Math.ceil(timerRemaining) + "s", cx, barY + barH + 3);
+    yOff = barY + barH + 22;
+
+    // Question text — large, centered
+    ctx.font = "bold 17px 'Chakra Petch',sans-serif";
+    ctx.fillStyle = "#fef3c7";
+    ctx.textAlign = "center";
+    // Word wrap the question
+    var words = q.q.split(" ");
+    var lines = [];
+    var currentLine = "";
+    var maxLineW = cw - 60;
+    for (var wi = 0; wi < words.length; wi++) {
+        var testLine = currentLine ? currentLine + " " + words[wi] : words[wi];
+        var testW = ctx.measureText(testLine).width;
+        if (testW > maxLineW && currentLine) {
+            lines.push(currentLine);
+            currentLine = words[wi];
+        } else {
+            currentLine = testLine;
+        }
+    }
+    if (currentLine) lines.push(currentLine);
+    for (var li = 0; li < lines.length; li++) {
+        ctx.fillText(lines[li], cx, yOff);
+        yOff += 22;
+    }
+    yOff += 16;
+
+    // Answer options — large buttons spanning the width
+    var labels = ["A", "B", "C", "D"];
+    var keyLabels = ["1", "2", "3", "4"];
+    var optMargin = 24;
+    var optW = cw - optMargin * 2;
+    var optH = Math.min(42, Math.floor((ch - yOff - 90) / (q.o.length + 1)));
+    var optPad = 6;
+    var optStartY = yOff;
+
+    for (var oi = 0; oi < q.o.length; oi++) {
+        var oy = optStartY + oi * (optH + optPad);
+        var isHover = boss.quizHoverIdx === oi;
+        var isAnswered = boss.quizAnswered;
+
+        // Option background
+        ctx.fillStyle = isHover && !isAnswered ? "rgba(161,98,7,0.55)" : "rgba(26,15,0,0.65)";
+        ctx.beginPath();
+        ctx.roundRect(optMargin, oy, optW, optH, 8);
+        ctx.fill();
+
+        // Option border
+        ctx.strokeStyle = isHover && !isAnswered ? "#fbbf24" : "#a16207";
+        ctx.lineWidth = isHover && !isAnswered ? 2 : 1;
+        ctx.beginPath();
+        ctx.roundRect(optMargin, oy, optW, optH, 8);
+        ctx.stroke();
+
+        // Key indicator circle
+        var keyCx = optMargin + 26;
+        var keyCy = oy + optH / 2;
+        ctx.beginPath();
+        ctx.arc(keyCx, keyCy, 13, 0, Math.PI * 2);
+        ctx.fillStyle = isHover && !isAnswered ? "#a16207" : "rgba(161,98,7,0.4)";
+        ctx.fill();
+        ctx.strokeStyle = "#fbbf24";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Key number
+        ctx.font = "bold 13px 'Chakra Petch',sans-serif";
+        ctx.fillStyle = "#fbbf24";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(keyLabels[oi], keyCx, keyCy);
+
+        // Option text
+        ctx.font = "14px 'Chakra Petch',sans-serif";
+        ctx.fillStyle = "#fde68a";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(labels[oi] + ") " + q.o[oi], optMargin + 48, oy + optH / 2);
+    }
+
+    // "Premi 1-4 per rispondere" hint
+    yOff = optStartY + q.o.length * (optH + optPad) + 10;
+    if (!boss.quizAnswered) {
+        ctx.font = "11px 'Chakra Petch',sans-serif";
+        ctx.fillStyle = "rgba(161,98,7,0.7)";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText("Premi 1-4 per rispondere", cx, yOff);
+    } else {
+        ctx.font = "bold 15px 'Chakra Petch',sans-serif";
+        ctx.fillStyle = "#4ade80";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText("Prossima domanda...", cx, yOff);
+    }
+
+    // Score display — also show wrong count
+    yOff += 22;
+    ctx.font = "12px 'Chakra Petch',sans-serif";
+    ctx.fillStyle = "#fbbf24";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    var wrongCount = boss.quizWrongCount || 0;
+    ctx.fillText("Corrette: " + boss.quizCorrect + "/5  |  Sbagliate: " + wrongCount, cx, yOff);
+
+    ctx.restore();
+}
 
 window.addEventListener("resize", function () { if (running || mState === "paused" || mState === "dead") fitC(); });
 resetRB();

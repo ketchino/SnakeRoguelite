@@ -126,8 +126,14 @@ function updateZB() {
         zoneProgEl.style.width = Math.max(0, G.boss.hp / G.boss.maxHp * 100) + "%";
         var bossDef3 = null;
         for (var bd3i = 0; bd3i < BOSS_DB.length; bd3i++) { if (BOSS_DB[bd3i].id === G.boss.id) { bossDef3 = BOSS_DB[bd3i]; break; } }
-        var gcTxt = bossDef3 ? G.boss.goldenCollected + "/" + bossDef3.goldenToDamage + " " + (G.boss.collectName || "DORATE") : "";
-        document.getElementById("zone-next-txt").textContent = gcTxt + " \u2764\uFE0F " + G.boss.hp + "/" + G.boss.maxHp;
+        var gcTxt = "";
+        if (G.boss.id === "cervo") {
+            gcTxt = G.boss.quizCorrect + "/5 corrette";
+        } else {
+            gcTxt = bossDef3 ? G.boss.goldenCollected + "/" + bossDef3.goldenToDamage + " " + (G.boss.collectName || "DORATE") : "";
+        }
+        var hpText = G.boss.id === "cervo" ? "Domanda " + (G.boss.quizQuestion + 1) + "/5" : " \u2764\uFE0F " + G.boss.hp + "/" + G.boss.maxHp;
+        document.getElementById("zone-next-txt").textContent = gcTxt + (G.boss.id === "cervo" ? " | " : "") + hpText;
         // Applica colore specifico del boss alla zona-bar
         if (bossDef3 && bossDef3.color) {
             var bc = bossDef3.color;

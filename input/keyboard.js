@@ -175,6 +175,13 @@ document.addEventListener("keydown", function (e) {
     }
     // Game input — solo se non siamo in un menu
     if (running && !paused && relicDelay <= 0 && cdTimer <= 0) {
+        // Cervo quiz: keys 1-4 to answer while snake keeps moving
+        if (G.boss && G.boss.id === "cervo" && G.boss.quizActive && !G.boss.quizAnswered && G.boss.quizCurrent) {
+            if (k === "1") { e.preventDefault(); _cervoAnswerByIdx(G, 0); return; }
+            if (k === "2") { e.preventDefault(); _cervoAnswerByIdx(G, 1); return; }
+            if (k === "3") { e.preventDefault(); _cervoAnswerByIdx(G, 2); return; }
+            if (k === "4") { e.preventDefault(); _cervoAnswerByIdx(G, 3); return; }
+        }
         if (isKeyMapped(k, "ability")) {
             e.preventDefault();
             // Priority: Kunai > Frammento del Vuoto
